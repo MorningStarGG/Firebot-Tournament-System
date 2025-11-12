@@ -1,6 +1,6 @@
 # Tournament System for Firebot
 
-A comprehensive and feature-rich tournament management system for Firebot, designed to create and manage professional tournament brackets with extensive customization options.
+A comprehensive and feature-rich tournament management system for Firebot, designed to create and manage advanced tournament brackets with extensive customization options.
 
 ## Features
 
