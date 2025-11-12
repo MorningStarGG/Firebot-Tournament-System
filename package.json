@@ -1,7 +1,7 @@
 {
     "name": "firebot-tournament-system",
-    "displayName": "Tournament System",
-    "description": "Double-Elimination Tournament System for Firebot",
+    "displayName": "Advanced Tournament System",
+    "description": "Single/Double Elimination or Round-Robin Tournament System for Firebot",
     "version": "1.0.0",
     "author": "MorningStarGG",
     "publisher": "MorningStarGG",
@@ -28,10 +28,15 @@
       "tournament",
       "bracket",
       "double-elimination",
+      "double elimination",
       "twitch",
       "competition",
       "matches",
-      "gaming"
+      "gaming",
+      "round robin",
+      "round-robin",
+      "single elimination",
+      "single-elimination"
     ],
     "devDependencies": {
       "@crowbartools/firebot-custom-scripts-types": "^5.63.1",
