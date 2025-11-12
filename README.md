@@ -532,6 +532,7 @@ This script is provided as-is under the GPL-3.0 license. You are free to modify 
 
 Special thanks to the Firebot community for their support and contributions.
 
+Some of the ideas and code here were inspired by conversations with the late CKY, whose guidance and encouragement were invaluable. May he rest in peace. Thank you for all the love, help, and support—and for pushing me to turn these ideas into scripts for everyone to enjoy on Firebot. I miss you deeply, my friend, and I’m saddened that you never got to see this finally released.
+
 ---
-**Author:** MorningStarGG  
 **AI Disclaimer:** Parts of this project were created with AI assistance to accelerate development.
