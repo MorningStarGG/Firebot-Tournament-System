@@ -1,0 +1,558 @@
+<style>
+    .effect-setting-content {
+        margin-bottom: -10px;
+    }
+</style>
+<!-- Main Tournament Settings Section -->
+<eos-container header="Tournament Settings" aria-label="Configure main tournament settings">
+    <firebot-input input-title="Tournament Title" model="effect.tournamentTitle" placeholder="Enter tournament title"
+        aria-label="Enter the title for your tournament"></firebot-input>
+
+    <h4>Tournament Players Input Mode</h4>
+    <label class="control-fb control--checkbox" aria-label="Toggle between custom variable and manual input">Use Custom
+        Variable or File
+        <input type="checkbox" ng-model="effect.tournamentOptions.useTextArea">
+        <div class="control__indicator"></div>
+    </label>
+    <div ng-if="effect.tournamentOptions.useTextArea" aria-label="Custom variable or file input section">
+        <firebot-input input-title="Variable/File" model="effect.tournamentOptions.textAreaInput"
+            placeholder="Enter one player per line or use $variable"
+            aria-label="Enter tournament players or variable"></firebot-input>
+        <div style="margin: 10px 0;" class="alert alert-warning" role="alert">
+            <i class="fas fa-sync"></i>
+            Only ONE player PER LINE in your file or variable!
+        </div>
+    </div>
+
+    <div style="margin-top: 15px" ng-if="!effect.tournamentOptions.useTextArea"
+        aria-label="Manual tournament players input section">
+        <h4>Tournament Players</h4>
+        <div style="margin-bottom: 10px;" ng-repeat="player in effect.tournamentOptions.playersList track by $index">
+            <div class="input-group">
+                <span class="input-group-addon">Player {{$index + 1}}</span>
+                <input type="text" class="form-control" ng-model="effect.tournamentOptions.playersList[$index]"
+                    aria-label="Enter player {{$index + 1}}">
+                <span class="input-group-btn">
+                    <button class="btn btn-danger" ng-click="removePlayer($index)"
+                        aria-label="Remove player {{$index + 1}}">
+                        <i class="far fa-trash-alt"></i>
+                    </button>
+                </span>
+            </div>
+        </div>
+        <button class="btn btn-primary" ng-click="addPlayer()" aria-label="Add new tournament player">Add
+            Player</button>
+    </div>
+
+</eos-container>
+
+<!-- Tournament Format Section -->
+<eos-container header="Tournament Format" pad-top="true" aria-label="Select tournament format">
+    <div class="input-group" style="margin-bottom: 10px;">
+        <span class="input-group-addon">Tournament Format</span>
+        <select class="form-control" ng-model="effect.settings.format">
+            <option value="double-elimination">Double Elimination</option>
+            <option value="single-elimination">Single Elimination</option>
+            <option value="round-robin">Round Robin</option>
+        </select>
+    </div>
+
+    <div ng-if="effect.settings.format === 'round-robin'" style="margin-top: 15px;">
+        <h5>Round Robin Settings</h5>
+        <div class="controls-fb-inline">
+            <label class="control-fb control--checkbox" aria-label="Allow draws in matches">Allow Draws
+                <input type="checkbox" ng-model="effect.settings.roundRobinSettings.allowDraws">
+                <div class="control__indicator"></div>
+            </label>
+        </div>
+        <firebot-input style="margin-bottom: 10px;" input-title="Points per Win" type="number"
+            model="effect.settings.roundRobinSettings.pointsPerWin" placeholder="3" min="0"
+            aria-label="Set points awarded for winning a match">
+        </firebot-input>
+        <firebot-input style="margin-bottom: 10px;" input-title="Points per Draw" type="number"
+            model="effect.settings.roundRobinSettings.pointsPerDraw" placeholder="1" min="0"
+            aria-label="Set points awarded for drawing a match">
+        </firebot-input>
+        <firebot-input input-title="Points per Loss" type="number"
+            model="effect.settings.roundRobinSettings.pointsPerLoss" placeholder="0" min="0"
+            aria-label="Set points awarded for losing a match">
+        </firebot-input>
+    </div>
+</eos-container>
+
+<!-- Tournament Configuration Section -->
+<eos-container header="Tournament Configuration" pad-top="true" aria-label="Configure tournament behavior settings">
+    <div class="controls-fb-inline">
+        <label class="control-fb control--checkbox" aria-label="Enable tournament reset on load">Reset tournament on
+            load
+            <input type="checkbox" ng-model="effect.tournamentOptions.resetOnLoad">
+            <div class="control__indicator"></div>
+        </label>
+    </div>
+    <firebot-input style="margin-bottom: 10px;" input-title="Display Duration After End (seconds)" type="number"
+        model="effect.settings.displayDuration" aria-label="Set display duration after tournament ends"></firebot-input>
+    <div class="setting-group">
+        <div class="controls-fb-inline">
+
+            <firebot-input input-title="Max Visible Matches" type="number" model="effect.settings.maxVisibleMatches"
+                placeholder="2" min="1" max="5" aria-label="Set maximum number of matches to display at once (1-5)">
+            </firebot-input>
+        </div>
+    </div>
+</eos-container>
+
+<!-- Tournament Display Settings Section -->
+<eos-container header="Tournament Display Settings" pad-top="true" aria-label="Configure tournament display options">
+    <div class="controls-fb-inline">
+        <label class="control-fb control--checkbox" aria-label="Enable manual short name customization">
+            Enable Custom Short Names
+            <input type="checkbox" ng-model="effect.settings.useManualShortNames">
+            <div class="control__indicator"></div>
+        </label>
+    </div>
+    <firebot-input input-title="Winners Bracket Title" model="effect.settings.customBracketNames.winnersTitle"
+        placeholder="Winners Bracket" style="margin-bottom: 10px;" aria-label="Set winners bracket full title">
+    </firebot-input>
+
+    <div ng-if="effect.settings.useManualShortNames">
+        <firebot-input input-title="Short Winners Bracket Title"
+            model="effect.settings.customBracketNames.winnersShortTitle" placeholder="Winners"
+            style="margin-bottom: 8px;" maxlength="14" aria-label="Set winners bracket short title (max 14 characters)">
+        </firebot-input>
+    </div>
+
+    <firebot-input input-title="Losers Bracket Title" model="effect.settings.customBracketNames.losersTitle"
+        placeholder="Losers Bracket" style="margin-bottom: 10px;" aria-label="Set losers bracket full title">
+    </firebot-input>
+
+    <div ng-if="effect.settings.useManualShortNames">
+        <firebot-input input-title="Short Losers Bracket Title"
+            model="effect.settings.customBracketNames.losersShortTitle" placeholder="Losers" style="margin-bottom: 8px;"
+            maxlength="14" aria-label="Set losers bracket short title (max 14 characters)">
+        </firebot-input>
+    </div>
+
+    <firebot-input input-title="Single Elimination Title" style="margin-bottom: 10px;"
+        model="effect.settings.customBracketNames.singleEliminationTitle" placeholder="TOURNAMENT BRACKET"
+        aria-label="Set single elimination title">
+    </firebot-input>
+
+    <firebot-input input-title="Finals Section Title" style="margin-bottom: 10px;"
+        model="effect.settings.customBracketNames.finalsTitle" placeholder="Finals"
+        aria-label="Set finals section title">
+    </firebot-input>
+
+    <div style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 5px;">
+        <h6 style="margin-bottom: 8px;">Short Names Preview:</h6>
+        <div ng-if="!effect.settings.useManualShortNames" style="font-size: 0.9em; color: #ddd;">
+            <div><strong>Automatic Mode:</strong></div>
+            <div>• "{{effect.settings.customBracketNames.winnersTitle || 'Winners Bracket'}}" → Auto-generated short
+                name + " R2"</div>
+            <div>• "{{effect.settings.customBracketNames.losersTitle || 'Losers Bracket'}}" → Auto-generated short name
+                + " R3"</div>
+            <div style="margin-top: 5px; font-style: italic;">Examples: "Winners R2", "Champion R1", "Upper Div A R3"
+            </div>
+        </div>
+        <div ng-if="effect.settings.useManualShortNames" style="font-size: 0.9em; color: #ddd;">
+            <div><strong>Manual Mode:</strong></div>
+            <div>• "{{effect.settings.customBracketNames.winnersShortTitle || '[Not Set]'}}" + " R2"</div>
+            <div>• "{{effect.settings.customBracketNames.losersShortTitle || '[Not Set]'}}" + " R3"</div>
+            <div style="margin-top: 5px; font-style: italic;">You have full control over the short names displayed.
+            </div>
+        </div>
+    </div>
+
+    <div class="setting-group">
+        <h5>Basic Display Options</h5>
+        <div class="controls-fb-inline">
+            <label class="control-fb control--checkbox" aria-label="Toggle bracket information display">Show bracket
+                info
+                <input type="checkbox" ng-model="effect.settings.showBracket">
+                <div class="control__indicator"></div>
+            </label>
+            <label class="control-fb control--checkbox" aria-label="Toggle match animation">Animate matches
+                <input type="checkbox" ng-model="effect.settings.animateMatches">
+                <div class="control__indicator"></div>
+            </label>
+            <label class="control-fb control--checkbox" aria-label="Toggle winner display">Show winner display
+                <input type="checkbox" ng-model="effect.settings.showWinnerDisplay">
+                <div class="control__indicator"></div>
+            </label>
+        </div>
+
+        <div class="setting-subgroup" ng-if="effect.settings.showWinnerDisplay">
+            <h6 style="margin-top: 15px;">Winner Graphic</h6>
+            <div class="input-group" style="margin-bottom: 10px;">
+                <span class="input-group-addon" id="winnerGraphicTypeLabel">Graphic Type</span>
+                <select class="form-control" ng-model="effect.settings.winnerGraphicType"
+                    aria-labelledby="winnerGraphicTypeLabel">
+                    <option value="trophy">Animated Trophy (default)</option>
+                    <option value="custom">Custom Image</option>
+                </select>
+            </div>
+
+            <div ng-if="effect.settings.winnerGraphicType === 'custom'">
+                <div style="margin-bottom: 10px;">
+                    <firebot-radios options="{ url: 'Image URL', local: 'Local file' }"
+                        model="effect.settings.winnerImageMode" inline="true"
+                        aria-label="Choose custom winner image source"></firebot-radios>
+                </div>
+
+                <div ng-if="effect.settings.winnerImageMode === 'url'" style="margin-bottom: 10px;">
+                    <firebot-input input-title="Image URL" model="effect.settings.winnerImageUrl"
+                        placeholder="https://example.com/winner.png"
+                        aria-label="Enter URL for custom winner image"></firebot-input>
+                </div>
+
+                <div ng-if="effect.settings.winnerImageMode === 'local'" style="margin-bottom: 10px;">
+                    <file-chooser model="effect.settings.winnerImageFile"
+                        options="{ filters: [ { name:'Image', extensions:['png','jpg','jpeg','gif','webp','svg'] } ] }"
+                        aria-label="Select local file for custom winner image">
+                    </file-chooser>
+                </div>
+
+                <div class="effect-info alert alert-info" role="alert">
+                    If no valid image is provided, the animated trophy will be shown instead.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="setting-group">
+        <h5>Layout Options</h5>
+        <div class="controls-fb-inline">
+            <label class="control-fb control--checkbox" aria-label="Toggle two-line layout">Use two-line layout
+                <input type="checkbox" ng-model="effect.settings.twoLineLayout">
+                <div class="control__indicator"></div>
+            </label>
+            <label class="control-fb control--checkbox" aria-label="Toggle modern stat badges">Use colored stat badges
+                <input type="checkbox" ng-model="effect.settings.coloredStatBadges">
+                <div class="control__indicator"></div>
+            </label>
+        </div>
+    </div>
+
+    <div class="setting-group">
+        <h5>Player Statistics</h5>
+        <div class="controls-fb-inline">
+            <label class="control-fb control--checkbox" aria-label="Toggle seed number visibility">Show seed numbers
+                <input type="checkbox" ng-model="effect.settings.showSeed">
+                <div class="control__indicator"></div>
+            </label>
+            <label class="control-fb control--checkbox" aria-label="Toggle wins display">Show wins
+                <input type="checkbox" ng-model="effect.settings.showWins">
+                <div class="control__indicator"></div>
+            </label>
+            <label class="control-fb control--checkbox" aria-label="Toggle losses display">Show losses
+                <input type="checkbox" ng-model="effect.settings.showLosses">
+                <div class="control__indicator"></div>
+            </label>
+            <label class="control-fb control--checkbox" aria-label="Toggle win percentage display">Show win percentage
+                <input type="checkbox" ng-model="effect.settings.showRecord">
+                <div class="control__indicator"></div>
+            </label>
+        </div>
+    </div>
+
+    <div class="setting-group">
+        <h5>Standings Display Options</h5>
+        <div class="controls-fb-inline">
+            <label class="control-fb control--checkbox" aria-label="Show tournament standings">Show Standings
+                <input type="checkbox" ng-model="effect.settings.showStandings">
+                <div class="control__indicator"></div>
+            </label>
+            <label class="control-fb control--checkbox" aria-label="Split standings to separate position">Split
+                Standings Display
+                <input type="checkbox" ng-model="effect.settings.splitStandings">
+                <div class="control__indicator"></div>
+            </label>
+            <label class="control-fb control--checkbox" aria-label="Use two-line layout for standings">Standings
+                Two-Line Layout
+                <input type="checkbox" ng-model="effect.settings.standingsTwoLineLayout">
+                <div class="control__indicator"></div>
+            </label>
+        </div>
+
+        <div ng-if="effect.settings.splitStandings" style="margin-top: 10px;">
+            <h5>Standings Position</h5>
+            <div class="input-group" style="margin-bottom: 10px;">
+                <span class="input-group-addon">Position</span>
+                <select class="form-control" ng-model="effect.settings.standingsPosition">
+                    <option value="Top Left">Top Left</option>
+                    <option value="Top Middle">Top Middle</option>
+                    <option value="Top Right">Top Right</option>
+                    <option value="Middle Left">Middle Left</option>
+                    <option value="Middle">Middle</option>
+                    <option value="Middle Right">Middle Right</option>
+                    <option value="Bottom Left">Bottom Left</option>
+                    <option value="Bottom Middle">Bottom Middle</option>
+                    <option value="Bottom Right">Bottom Right</option>
+                    <option value="Custom">Custom</option>
+                </select>
+            </div>
+
+            <div ng-if="effect.settings.standingsPosition === 'Custom'">
+                <h5>Custom Standings Position</h5>
+                <p style="margin-bottom: 15px;">Set the distance in pixels from the edges of the screen. Leave fields
+                    empty for auto positioning.</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <firebot-input input-title="Top" type="number" model="effect.settings.standingsCustomCoords.top"
+                            placeholder="Distance from top">
+                        </firebot-input>
+                        <firebot-input input-title="Left" type="number"
+                            model="effect.settings.standingsCustomCoords.left" placeholder="Distance from left">
+                        </firebot-input>
+                    </div>
+                    <div class="col-md-6">
+                        <firebot-input input-title="Bottom" type="number"
+                            model="effect.settings.standingsCustomCoords.bottom" placeholder="Distance from bottom">
+                        </firebot-input>
+                        <firebot-input input-title="Right" type="number"
+                            model="effect.settings.standingsCustomCoords.right" placeholder="Distance from right">
+                        </firebot-input>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 15px;">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="input-group" style="margin-bottom: 10px;">
+                        <color-picker-input model="effect.styles.standingsBgColor" label="BG Color"
+                            aria-label="Select standings background color"></color-picker-input>
+                    </div>
+                    <div class="input-group" style="margin-bottom: 10px;">
+                        <color-picker-input model="effect.styles.standingsPlayerBgColor" label="Name BG"
+                            aria-label="Select standings player name background color"></color-picker-input>
+                    </div>
+                    <div class="input-group" style="margin-bottom: 10px;">
+                        <color-picker-input model="effect.styles.standingsTitleColor" label="Title Text"
+                            aria-label="Select standings title color"></color-picker-input>
+                    </div>
+                    <div class="input-group" style="margin-bottom: 10px;">
+                        <color-picker-input model="effect.styles.standingsPointsColor" label="Points Text"
+                            aria-label="Select standings points color"></color-picker-input>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="input-group" style="margin-bottom: 10px;">
+                        <color-picker-input model="effect.styles.standingsBorderColor" label="Border Color"
+                            aria-label="Select standings border color"></color-picker-input>
+                    </div>
+                    <div class="input-group" style="margin-bottom: 10px;">
+                        <color-picker-input model="effect.styles.standingsStatsBgColor" label="Stats BG"
+                            aria-label="Select standings stats background color"></color-picker-input>
+                    </div>
+                    <div class="input-group" style="margin-bottom: 10px;">
+                        <color-picker-input model="effect.styles.standingsPlayerNameColor" label="Name Text"
+                            aria-label="Select standings player name color"></color-picker-input>
+                    </div>
+                    <div class="input-group" style="margin-bottom: 10px;">
+                        <color-picker-input model="effect.styles.standingsRecordColor" label="Record Text"
+                            aria-label="Select standings record color"></color-picker-input>
+                    </div>
+                </div>
+                <div class="input-group" style="margin-bottom: 10px;">
+                    <color-picker-input model="effect.styles.standingsStatusColor" label="Status Text"
+                        aria-label="Select standings status color"></color-picker-input>
+                </div>
+
+                <div class="setting-group">
+                    <h6>Top 5 Ranks</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="input-group" style="margin-bottom: 10px;">
+                                <color-picker-input model="effect.styles.standingRank1BgColor" label="Rank 1 BG"
+                                    aria-label="Select rank 1 background color"></color-picker-input>
+                            </div>
+                            <div class="input-group" style="margin-bottom: 10px;">
+                                <color-picker-input model="effect.styles.standingRank2BgColor" label="Rank 2 BG"
+                                    aria-label="Select rank 2 background color"></color-picker-input>
+                            </div>
+                            <div class="input-group" style="margin-bottom: 10px;">
+                                <color-picker-input model="effect.styles.standingRank3BgColor" label="Rank 3 BG"
+                                    aria-label="Select rank 3 background color"></color-picker-input>
+                            </div>
+                            <div class="input-group" style="margin-bottom: 10px;">
+                                <color-picker-input model="effect.styles.standingRank4BgColor" label="Rank 4 BG"
+                                    aria-label="Select rank 4 background color"></color-picker-input>
+                            </div>
+                            <div class="input-group" style="margin-bottom: 10px;">
+                                <color-picker-input model="effect.styles.standingRank5BgColor" label="Rank 5 BG"
+                                    aria-label="Select rank 5 background color"></color-picker-input>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="input-group" style="margin-bottom: 10px;">
+                                <color-picker-input model="effect.styles.standingRank1TextColor" label="Rank 1 Text"
+                                    aria-label="Select rank 1 text color"></color-picker-input>
+                            </div>
+                            <div class="input-group" style="margin-bottom: 10px;">
+                                <color-picker-input model="effect.styles.standingRank2TextColor" label="Rank 2 Text"
+                                    aria-label="Select rank 2 text color"></color-picker-input>
+                            </div>
+                            <div class="input-group" style="margin-bottom: 10px;">
+                                <color-picker-input model="effect.styles.standingRank3TextColor" label="Rank 3 Text"
+                                    aria-label="Select rank 3 text color"></color-picker-input>
+                            </div>
+                            <div class="input-group" style="margin-bottom: 10px;">
+                                <color-picker-input model="effect.styles.standingRank4TextColor" label="Rank 4 Text"
+                                    aria-label="Select rank 4 text color"></color-picker-input>
+                            </div>
+                            <div class="input-group" style="margin-bottom: 10px;">
+                                <color-picker-input model="effect.styles.standingRank5TextColor" label="Rank 5 Text"
+                                    aria-label="Select rank 5 text color"></color-picker-input>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h6>Other Ranks (6+)</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="input-group" style="margin-bottom: 10px;">
+                                <color-picker-input model="effect.styles.standingRankOthersBgColor" label="Others BG"
+                                    aria-label="Select other ranks background color"></color-picker-input>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="input-group" style="margin-bottom: 10px;">
+                                <color-picker-input model="effect.styles.standingRankOthersTextColor"
+                                    label="Others Text" aria-label="Select other ranks text color"></color-picker-input>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <firebot-input input-title="Max Visible Standings" type="number" model="effect.settings.maxVisibleStandings"
+                placeholder="5" min="1" max="10" aria-label="Set maximum number of standings to display (1-10)">
+            </firebot-input>
+        </div>
+</eos-container>
+
+<!-- Tournament Style Settings Section -->
+<eos-container header="Tournament Style Settings" pad-top="true" aria-label="Configure tournament visual appearance">
+    <div class="setting-group">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="input-group" style="margin-bottom: 10px;">
+                    <color-picker-input model="effect.styles.backgroundColor" label="BG Color"
+                        aria-label="Select tournament background color"></color-picker-input>
+                </div>
+                <div class="input-group" style="margin-bottom: 10px;">
+                    <color-picker-input model="effect.styles.accentColor" label="Accent Color"
+                        aria-label="Select tournament accent color"></color-picker-input>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="input-group" style="margin-bottom: 10px;">
+                    <color-picker-input model="effect.styles.borderColor" label="Border Color"
+                        aria-label="Select border color"></color-picker-input>
+                </div>
+                <div class="input-group" style="margin-bottom: 10px;">
+                    <color-picker-input model="effect.styles.titleColor" label="Title Color"
+                        aria-label="Select title text color"></color-picker-input>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="setting-group">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="input-group" style="margin-bottom: 10px;">
+                    <color-picker-input model="effect.styles.playerCardColor" label="Player Card"
+                        aria-label="Select player card background color"></color-picker-input>
+                </div>
+                <div class="input-group" style="margin-bottom: 10px;">
+                    <color-picker-input model="effect.styles.nameTextColor" label="Name Text"
+                        aria-label="Select player name text color"></color-picker-input>
+                </div>
+                <div class="input-group" style="margin-bottom: 10px;">
+                    <color-picker-input model="effect.styles.winnerTextColor" label="Winner Text"
+                        aria-label="Select winner display text color"></color-picker-input>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="input-group" style="margin-bottom: 10px;"
+                    ng-if="effect.settings.showWins || effect.settings.showLosses || effect.settings.showRecord || effect.settings.showSeed">
+                    <color-picker-input model="effect.styles.statsCardColor" label="Stats Card"
+                        aria-label="Select stats card background color"></color-picker-input>
+                </div>
+                <div class="input-group" style="margin-bottom: 10px;"
+                    ng-if="effect.settings.showWins || effect.settings.showLosses || effect.settings.showRecord || effect.settings.showSeed">
+                    <color-picker-input model="effect.styles.statsTextColor" label="Stats Text"
+                        aria-label="Select stats text color"></color-picker-input>
+                </div>
+                <div class="input-group" style="margin-bottom: 10px;">
+                    <color-picker-input model="effect.styles.winnerRecordColor" label="Winner Record"
+                        aria-label="Select winner record text color"></color-picker-input>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="setting-group"
+        ng-if="effect.settings.coloredStatBadges && (effect.settings.showSeed || effect.settings.showRecord || effect.settings.showWins || effect.settings.showLosses)">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="input-group" style="margin-bottom: 10px;" ng-if="effect.settings.showSeed">
+                    <color-picker-input model="effect.styles.seedBadgeColor" label="Seed BG"
+                        aria-label="Select seed badge color"></color-picker-input>
+                </div>
+                <div class="input-group" style="margin-bottom: 10px;" ng-if="effect.settings.showWins">
+                    <color-picker-input model="effect.styles.winnerColor" label="Wins BG"
+                        aria-label="Select wins badge color"></color-picker-input>
+
+                </div>
+                <div class="input-group" style="margin-bottom: 10px;" ng-if="effect.settings.showLosses">
+                    <color-picker-input model="effect.styles.loserColor" label="Losses BG"
+                        aria-label="Select losses badge color"></color-picker-input>
+
+                </div>
+                <div class="input-group" style="margin-bottom: 10px;" ng-if="effect.settings.showRecord">
+                    <color-picker-input model="effect.styles.percentageBadgeColor" label="Percentage BG"
+                        aria-label="Select percentage badge color"></color-picker-input>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="input-group" style="margin-bottom: 10px;" ng-if="effect.settings.showSeed">
+                    <color-picker-input model="effect.styles.seedBadgeTextColor" label="Seed Text"
+                        aria-label="Select seed badge text color"></color-picker-input>
+                </div>
+                <div class="input-group" style="margin-bottom: 10px;" ng-if="effect.settings.showWins">
+                    <color-picker-input model="effect.styles.winsBadgeTextColor" label="Wins Text"
+                        aria-label="Select wins badge text color"></color-picker-input>
+                </div>
+
+                <div class="input-group" style="margin-bottom: 10px;" ng-if="effect.settings.showLosses">
+                    <color-picker-input model="effect.styles.lossesBadgeTextColor" label="Losses Text"
+                        aria-label="Select losses badge text color"></color-picker-input>
+                </div>
+                <div class="input-group" style="margin-bottom: 10px;" ng-if="effect.settings.showRecord">
+                    <color-picker-input model="effect.styles.percentageBadgeTextColor" label="Percentage Text"
+                        aria-label="Select percentage badge text color"></color-picker-input>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <firebot-input input-title="Tournament Scale" model="effect.styles.tournamentScale" placeholder="1"
+        aria-label="Set tournament scale size"></firebot-input>
+</eos-container>
+
+<!-- Overlay Position and Instance Settings -->
+<eos-overlay-position effect="effect" pad-top="true"></eos-overlay-position>
+<eos-overlay-instance effect="effect" pad-top="true"></eos-overlay-instance>
+
+<!-- Overlay Information Alert -->
+<eos-container>
+    <div class="effect-info alert alert-warning" role="alert">
+        This effect requires the Firebot overlay to be loaded in your broadcasting software.
+        <a href ng-click="showOverlayInfoModal()" style="text-decoration:underline"
+            aria-label="Learn more about Firebot overlay requirements">Learn more</a>
+    </div>
+</eos-container>

@@ -1,0 +1,109 @@
+<style>
+    .tournamentNames {
+        max-width: 150px;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        display: inline-block;
+    }
+
+    .tournamentList {
+        min-width: 550px;
+    }
+
+    .tournamentNames-tooltip-container {
+        min-width: 150px;
+        height: 40px;
+        max-width: 150px;
+    }
+
+    .tournamentNames-tooltip {
+        display: none;
+        position: absolute;
+        left: 0;
+        top: 100%;
+        background-color: #333;
+        color: #fff;
+        padding: 5px 10px;
+        border-radius: 4px;
+        white-space: nowrap;
+        font-size: 14px;
+        z-index: 1000;
+    }
+
+    .tournamentNames-tooltip-container:hover .tournamentNames-tooltip {
+        display: block;
+    }
+</style>
+<!-- Main container with descriptive heading -->
+<eos-container header="Tournament Backup Manager" role="region" aria-label="Tournament Backup Management Interface">
+    <div class="input-group" style="margin-bottom: 15px;">
+        <span class="input-group-addon" id="mode-label">Tournament Selection Mode</span>
+        <select class="form-control" 
+                ng-model="effect.tournamentSelectionMode" 
+                ng-change="effectValueChanged()"
+                aria-labelledby="mode-label"
+                aria-describedby="mode-description">
+            <option value="tournamentList">Tournament Title List</option>
+            <option value="manual">Manual Tournament Title Entry</option>
+        </select>
+    </div>
+
+    <div ng-if="effect.tournamentSelectionMode === 'manual'" role="form" aria-label="Manual Tournament Entry Form">
+        <firebot-input 
+            input-title="Tournament Title Variable" 
+            pad-top="true" 
+            model="effect.manualTournamentTitle"
+            placeholder="$variable or tournament name"
+            aria-label="Enter Tournament Title">
+        </firebot-input>
+
+        <div style="padding-top: 15px;" role="radiogroup" aria-label="Tournament Action Selection">
+            <firebot-radios 
+                model="effect.action" 
+                options="{ restore: 'Restore Tournament', remove: 'Permanently Delete' }"
+                inline="true">
+            </firebot-radios>
+        </div>
+    </div>
+
+    <div ng-if="effect.tournamentSelectionMode === 'tournamentList'" role="region" aria-label="Tournament Backup List">
+        <div ng-if="loading" class="text-center" role="status" aria-live="polite">
+            <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Loading backups...
+        </div>
+
+        <div ng-if="!loading && (!backupTournaments || backupTournaments.length === 0)" 
+             class="alert alert-info" 
+             role="alert">
+            <i class="fas fa-archive" aria-hidden="true"></i> No backed up tournaments found
+        </div>
+
+        <div ng-if="!loading && backupTournaments.length > 0" 
+             ng-repeat="tournament in backupTournaments" 
+             class="backup-item"
+             style="margin-bottom: 10px; display: flex; justify-content: center; align-items: center;"
+             role="listitem">
+            <div class="input-group tournamentList">
+                <div class="tournamentNames-tooltip-container input-group-addon" role="tooltip">
+                    <span class="tournamentNames" aria-label="Tournament Title">Tournament Name: {{tournament.tournamentData.title}}</span>
+                    <div class="tournamentNames-tooltip" role="tooltip">Tournament Name: {{tournament.tournamentData.title}}</div>
+                </div>
+                <span class="input-group-addon" aria-label="Removal Date">
+                    <i class="far fa-clock" aria-hidden="true"></i> {{tournament.removedAt | date:'medium'}}
+                </span>
+                <span class="input-group-btn">
+                    <button class="btn btn-primary" 
+                            ng-click="restoreTournament(tournament.id)"
+                            aria-label="Restore Tournament {{tournament.tournamentData.title}}">
+                        <i class="fas fa-undo" aria-hidden="true"></i> Restore
+                    </button>
+                    <button class="btn btn-danger" 
+                            ng-click="deleteTournament(tournament.id)"
+                            aria-label="Delete Tournament {{tournament.tournamentData.title}}">
+                        <i class="fas fa-trash" aria-hidden="true"></i> Delete
+                    </button>
+                </span>
+            </div>
+        </div>
+    </div>
+</eos-container>

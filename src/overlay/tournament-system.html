@@ -1,0 +1,2619 @@
+<div class="tournamentOverlay">
+    <style>
+        :root {
+            --primary: #a60000;
+            --primary-rgb: 166, 0, 0;
+            --background: #111111;
+            --text: #ffffff;
+            --player-card: #222222;
+            --card: #222222;
+            --stats-card: #1a1a1a;
+            --border: #333333;
+            --winner: #00cc66;
+            --winner-text: #ffffff;
+            --winner-record: #371F06;
+            --loser: #cc3333;
+            --seed-badge: var(--primary);
+            --percentage-badge: var(--primary);
+            --tournament-scale: 1;
+            --name-text: #ffffff;
+            --stats-text: #d3d3d3;
+            --seed-badge-text: #ffffff;
+            --wins-badge-text: #ffffff;
+            --losses-badge-text: #ffffff;
+            --percentage-badge-text: #ffffff;
+            --standing-rank1-bg: #ffd700;
+            --standing-rank1-text: #000000;
+            --standing-rank2-bg: #c0c0c0;
+            --standing-rank2-text: #000000;
+            --standing-rank3-bg: #cd7f32;
+            --standing-rank3-text: #000000;
+            --standing-rank4-bg: #a60000;
+            --standing-rank4-text: #ffffff;
+            --standing-rank5-bg: #a60000;
+            --standing-rank5-text: #ffffff;
+            --standing-rank-others-bg: #333333;
+            --standing-rank-others-text: #ffffff;
+            --standings-title-color: var(--text);
+            --standings-points-color: var(--winner);
+            --standings-record-color: var(--stats-text);
+            --standings-player-name-color: var(--name-text);
+            --standings-bg-color: var(--background);
+            --standings-player-bg-color: var(--player-card);
+            --standings-stats-bg-color: var(--stats-card);
+            --standings-border-color: var(--border);
+            --standings-stats-bg-color: var(--stats-card);
+            --standings-status-color: var(--stats-text);
+            --primary-text: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: transparent;
+            font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: var(--text);
+            font-size: 1rem;
+        }
+
+        .tournament-view {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transform: scale(var(--tournament-scale));
+            width: auto;
+        }
+
+        .current-matches {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            background: transparent;
+            border-radius: 16px;
+            padding: 24px;
+            width: 420px;
+            max-width: 90vw;
+            position: relative;
+        }
+
+        #active-matches {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: relative;
+            min-height: 160px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .match-card {
+            display: flex;
+            flex-direction: column;
+            background: var(--background);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            opacity: 1;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .match-card.removing {
+            position: absolute;
+            width: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        @keyframes matchExitFade {
+            from {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            to {
+                opacity: 0;
+                transform: scale(0.95) translateY(-10px);
+            }
+        }
+
+        @keyframes matchEnter {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .match-card.adding {
+            animation: matchEnter 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        .match-title {
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            font-weight: 500;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: center;
+        }
+
+        .match-content {
+            display: flex;
+            flex-direction: column;
+            padding: 8px 12px;
+            gap: 4px;
+        }
+
+        /* Base player styles */
+        .player {
+            position: relative;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: flex;
+        }
+
+        .player.one-line .player-name.fitted,
+        .player.two-line .player-name.fitted {
+            opacity: 1;
+        }
+
+        /* One-line layout */
+        .player.one-line {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            margin: 4px 0;
+            border-radius: 8px;
+            background: var(--player-card);
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .player.one-line .player-name {
+            flex: 1;
+            min-width: 0;
+            font-weight: 600;
+            color: var(--name-text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: clamp(0.875rem, 2.5vw, 1.25rem);
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+
+        .player.one-line .player-stats {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .player.one-line .player-stats.simple {
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: var(--background);
+            font-weight: 600;
+            color: var(--stats-text);
+            font-size: clamp(0.75rem, 2vw, 1rem);
+        }
+
+        /* Two-line layout */
+        .player.two-line {
+            flex-direction: column;
+            gap: 8px;
+            padding: 8px;
+            margin: 4px 0;
+        }
+
+        .player.two-line .player-name {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: var(--player-card);
+            font-weight: 600;
+            font-size: clamp(1rem, 3vw, 1.4rem);
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--name-text);
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+
+        .player.two-line .player-stats {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: var(--stats-card);
+            font-size: clamp(0.875rem, 2.5vw, 1.25rem);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Stats styles */
+        .player-stats.simple {
+            font-weight: 600;
+            color: var(--stats-text);
+        }
+
+        .player.two-line .player-stats.simple span {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 12px;
+            background: var(--background);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Modern badge container */
+        .player-stats.badges {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* Stat badges */
+        .player-stats.badges .stat-badge {
+            padding: 4px 10px;
+            border-radius: 16px;
+            font-size: clamp(0.625rem, 1.5vw, 0.75rem);
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            color: var(--stats-text);
+        }
+
+        /* Badge colors */
+        .player-stats.badges .stat-badge.seed {
+            background: var(--seed-badge);
+            color: var(--seed-badge-text);
+            opacity: 0.9;
+        }
+
+        .player-stats.badges .stat-badge.wins {
+            background: var(--winner);
+            color: var(--wins-badge-text);
+            opacity: 0.9;
+        }
+
+        .player-stats.badges .stat-badge.losses {
+            background: var(--loser);
+            color: var(--losses-badge-text);
+            opacity: 0.9;
+        }
+
+        .player-stats.badges .stat-badge.percentage {
+            background: var(--percentage-badge);
+            color: var(--percentage-badge-text);
+            opacity: 0.9;
+        }
+
+        /* Larger badges for two-line layout */
+        .player.two-line .player-stats.badges .stat-badge {
+            font-size: clamp(0.75rem, 2vw, 1rem);
+            padding: 6px 14px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            border-radius: 20px;
+        }
+
+        /* Winner/loser styling */
+        .player.winner.one-line {
+            border-left: 3px solid var(--winner);
+            background: rgba(0, 204, 102, 0.1);
+        }
+
+        .player.winner.two-line .player-name,
+        .player.winner.two-line .player-stats {
+            background: rgba(0, 204, 102, 0.1);
+            border-left: 3px solid var(--winner);
+        }
+
+        .player.loser.one-line {
+            border-left: 3px solid var(--loser);
+            background: rgba(204, 51, 51, 0.1);
+        }
+
+        .player.loser.two-line .player-name,
+        .player.loser.two-line .player-stats {
+            background: rgba(204, 51, 51, 0.1);
+            border-left: 3px solid var(--loser);
+        }
+
+        .bracket-status {
+            align-self: center;
+            font-size: 1.125rem;
+            font-weight: 700;
+            padding: 12px 16px;
+            background: var(--primary);
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 12px rgba(166, 0, 0, 0.2);
+            transform: scale(0.88);
+            line-height: 1.4;
+            white-space: pre-line;
+        }
+
+        .remaining-matches {
+            align-self: center;
+            text-align: center;
+            font-size: 1rem;
+            color: #e3e3e3;
+            padding: 12px 16px;
+            background: var(--primary);
+            border-radius: 8px;
+            font-weight: 700;
+            box-shadow: 0 2px 12px rgba(166, 0, 0, 0.2);
+            transform: scale(0.88);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Standings */
+        .standings {
+            background: var(--standings-bg-color);
+            border-radius: 12px;
+            padding: 24px;
+            width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+            border: 1px solid var(--standings-border-color);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .standings-player-name {
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+
+        .standings-player-name.fitted {
+            opacity: 1;
+        }
+
+        .standings h3 {
+            margin: 0 0 12px 0;
+            text-align: center;
+            color: var(--standings-title-color);
+            font-size: 1.25rem;
+        }
+
+        .standing-row {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            transition: background 0.2s ease;
+            gap: 8px;
+            animation: fadeInUp 0.4s ease forwards;
+            animation-delay: calc(0.1s * var(--row-index, 0));
+            opacity: 0;
+        }
+
+        .standing-row:last-child {
+            border-bottom: none;
+        }
+
+        .standing-row .rank {
+            font-weight: bold;
+            color: var(--primary);
+            width: 30px;
+            flex-shrink: 0;
+        }
+
+        .standing-row .player-name {
+            flex: 1;
+            margin: 0 12px;
+            font-weight: 600;
+            color: var(--standings-player-name-color);
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+            min-width: 0;
+        }
+
+        .standing-row .points {
+            font-weight: bold;
+            color: var(--standings-points-color);
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .standing-row .record {
+            color: var(--standings-record-color);
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .standing-row:not(.two-line) .rank-badge {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 24px;
+            font-size: 0.8rem;
+            margin-right: 8px;
+        }
+
+        .standing-row:not(.two-line) .rank-badge.rank-1 {
+            background: var(--standing-rank1-bg);
+            color: var(--standing-rank1-text);
+        }
+
+        .standing-row:not(.two-line) .rank-badge.rank-2 {
+            background: var(--standing-rank2-bg);
+            color: var(--standing-rank2-text);
+        }
+
+        .standing-row:not(.two-line) .rank-badge.rank-3 {
+            background: var(--standing-rank3-bg);
+            color: var(--standing-rank3-text);
+        }
+
+        .standing-row:not(.two-line) .rank-badge.rank-4 {
+            background: var(--standing-rank4-bg);
+            color: var(--standing-rank4-text);
+        }
+
+        .standing-row:not(.two-line) .rank-badge.rank-5 {
+            background: var(--standing-rank5-bg);
+            color: var(--standing-rank5-text);
+        }
+
+        .standing-row:not(.two-line) .rank-badge.rank-other {
+            background: var(--standing-rank-others-bg);
+            color: var(--standing-rank-others-text);
+        }
+
+        .standing-row:not(.two-line):nth-child(2) {
+            background-color: rgba(255, 215, 0, 0.05);
+        }
+
+        .standing-row:not(.two-line):nth-child(3) {
+            background-color: rgba(192, 192, 192, 0.05);
+        }
+
+        .standing-row:not(.two-line):nth-child(4) {
+            background-color: rgba(205, 127, 50, 0.05);
+        }
+
+        /* Split standings styles */
+        .standings.split {
+            position: fixed;
+            width: 450px;
+            max-width: 90vw;
+            background: var(--standings-bg-color);
+            border-radius: 16px;
+            padding: 24px;
+            overflow: hidden;
+            border: 1px solid var(--standings-border-color);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+            margin: 20px;
+        }
+
+        /* Position classes for standings */
+        .standings.split.top-left {
+            top: 0;
+            left: 0;
+        }
+
+        .standings.split.top-middle {
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .standings.split.top-right {
+            top: 0;
+            right: 0;
+        }
+
+        .standings.split.middle-left {
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+        }
+
+        .standings.split.middle {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .standings.split.middle-right {
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+        }
+
+        .standings.split.bottom-left {
+            bottom: 0;
+            left: 0;
+        }
+
+        .standings.split.bottom-middle {
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .standings.split.bottom-right {
+            bottom: 0;
+            right: 0;
+        }
+
+        /* Two-line layout for standings */
+        .standing-row.two-line {
+            flex-direction: column;
+            padding: 12px 12px 12px 20px;
+            gap: 8px;
+            position: relative;
+        }
+
+        .standing-row.two-line .player-name {
+            flex: 1;
+            text-align: center;
+            margin: 0;
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: var(--standings-player-bg-color);
+            font-weight: 600;
+            font-size: clamp(1rem, 3vw, 1.4rem);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--standings-player-name-color);
+            max-width: none;
+        }
+
+        .standing-row.two-line .standing-header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+
+
+        .standing-row.two-line .standing-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: var(--standings-stats-bg-color);
+            font-size: clamp(0.875rem, 2.5vw, 1.25rem);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            gap: 12px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Stats badges container for standings */
+        .standing-row.two-line .stats-section {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .standing-row.two-line .stat-badge {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: clamp(0.75rem, 2vw, 1rem);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .standing-row.two-line .stat-badge.wins {
+            background: var(--winner);
+            color: var(--wins-badge-text);
+        }
+
+        .standing-row.two-line .stat-badge.losses {
+            background: var(--loser);
+            color: var(--losses-badge-text);
+        }
+
+        .standing-row.two-line .stat-badge.draws {
+            background: var(--percentage-badge);
+            color: var(--percentage-badge-text);
+        }
+
+        .standing-row.two-line .stat-badge.points {
+            background: var(--seed-badge);
+            color: var(--seed-badge-text);
+        }
+
+        .standing-row.two-line .stat-badge.percentage {
+            background: var(--percentage-badge);
+            color: var(--percentage-badge-text);
+        }
+
+        /* Status section for standings */
+        .standing-row.two-line .status-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: clamp(0.875rem, 2.2vw, 1.1rem);
+            font-weight: 600;
+            color: var(--standings-status-color, var(--stats-text));
+        }
+
+        /* Status indicator badges */
+        .standing-row.two-line .status-badge {
+            padding: 4px 10px;
+            border-radius: 16px;
+            font-size: clamp(0.75rem, 1.8vw, 0.95rem);
+            font-weight: 600;
+            background: var(--primary);
+            color: var(--primary-text, #ffffff);
+            white-space: nowrap;
+        }
+
+        /* Special status colors */
+        .standing-row.two-line .status-badge.champion {
+            background: var(--winner);
+            color: var(--wins-badge-text);
+        }
+
+        .standing-row.two-line .status-badge.finalist {
+            background: var(--seed-badge);
+            color: var(--seed-badge-text);
+        }
+
+        .standing-row.two-line .status-badge.eliminated {
+            background: var(--loser);
+            color: var(--losses-badge-text);
+        }
+
+        .standing-row.two-line .status-badge.winners {
+            background: var(--winner);
+            color: var(--wins-badge-text);
+        }
+
+        .standing-row.two-line .status-badge.losers {
+            background: var(--loser);
+            color: var(--losses-badge-text);
+        }
+
+        .standing-row.two-line .rank {
+            position: absolute;
+            left: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Styles for rank badges with custom colors */
+        .standing-row.two-line .rank.rank-1 {
+            background: var(--standing-rank1-bg);
+            color: var(--standing-rank1-text);
+            width: 32px;
+            height: 32px;
+            font-size: 1rem;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .standing-row.two-line .rank.rank-2 {
+            background: var(--standing-rank2-bg);
+            color: var(--standing-rank2-text);
+            width: 30px;
+            height: 30px;
+            font-size: 0.95rem;
+            box-shadow: 0 0 8px rgba(192, 192, 192, 0.5);
+        }
+
+        .standing-row.two-line .rank.rank-3 {
+            background: var(--standing-rank3-bg);
+            color: var(--standing-rank3-text);
+            width: 30px;
+            height: 30px;
+            font-size: 0.95rem;
+            box-shadow: 0 0 8px rgba(205, 127, 50, 0.5);
+        }
+
+        .standing-row.two-line .rank.rank-4 {
+            background: var(--standing-rank4-bg);
+            color: var(--standing-rank4-text);
+        }
+
+        .standing-row.two-line .rank.rank-5 {
+            background: var(--standing-rank5-bg);
+            color: var(--standing-rank5-text);
+        }
+
+        .standing-row.two-line .rank.rank-other {
+            background: var(--standing-rank-others-bg);
+            color: var(--standing-rank-others-text);
+        }
+
+        .hidden {
+            opacity: 0 !important;
+            pointer-events: none;
+            transform: scale(0.95);
+            transition: all 0.5s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .player {
+            animation: fadeInUp 0.4s ease forwards;
+            animation-delay: calc(0.1s * var(--player-index, 0));
+        }
+
+        @keyframes winnerPulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 var(--primary);
+            }
+
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 30px 0 var(--primary);
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 var(--primary);
+            }
+        }
+
+        .winner-pulse {
+            animation: winnerPulse 2s infinite;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(-20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .slide-in {
+            animation: slideIn 0.5s forwards;
+        }
+
+        .trophy-icon {
+            font-size: 96px;
+        }
+
+        .winner-name {
+            font-size: 5rem;
+            font-weight: 700;
+            margin-bottom: 30px;
+        }
+
+        .winner-subtitle {
+            font-size: 2rem;
+            font-weight: 500;
+        }
+
+        @keyframes celebrateIn {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -40%) scale(0.8);
+            }
+
+            50% {
+                transform: translate(-50%, -52%) scale(1.02);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        @keyframes confettiFall {
+            0% {
+                transform: translateY(-50px) rotate(0deg);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(200px) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        .confetti {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .winner-display {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s ease-out;
+        }
+
+        .winner-display.animate-in {
+            opacity: 1;
+        }
+
+        .winner-display.animate-out {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+
+        .winner-card {
+            background: rgba(30, 30, 30, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.1),
+                0 0 30px var(--primary);
+            transform: scale(0.9);
+            opacity: 0;
+            animation: cardEnter 0.8s cubic-bezier(0.2, 1, 0.3, 1) forwards;
+            overflow: hidden;
+            position: relative;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .winner-card-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .winner-label {
+            font-size: 1.5rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            transform: translateY(20px);
+            opacity: 0;
+            animation: textRise 0.6s ease-out 0.6s forwards;
+        }
+
+        .winner-name {
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: linear-gradient(120deg, #ffffff, #ffda6a);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1.5rem;
+            transform: translateY(20px);
+            opacity: 0;
+            animation: textRise 0.6s ease-out 0.8s forwards;
+        }
+
+        .winner-stats {
+            display: flex;
+            justify-content: center;
+            margin-top: 1rem;
+            transform: translateY(20px);
+            opacity: 0;
+            animation: textRise 0.6s ease-out 1s forwards;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 0 20px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .stat-divider {
+            width: 1px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Trophy animations */
+        .trophy-container {
+            opacity: 0;
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: trophyEnter 0.8s cubic-bezier(0.2, 1, 0.3, 1) 0.3s forwards;
+        }
+
+        .trophy-container.custom-image {
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .winner-image-wrapper {
+            width: 260px;
+            height: 260px;
+            max-width: 60vw;
+            max-height: 60vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .winner-image-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+
+        .winner-image-wrapper.has-image img {
+            display: block;
+        }
+
+        .winner-image-wrapper .winner-image-fallback {
+            display: none;
+            font-size: 64px;
+            font-weight: 800;
+            color: rgba(255, 255, 255, 0.9);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 0 12px 28px rgba(0, 0, 0, 0.65);
+            pointer-events: none;
+        }
+
+        .winner-image-wrapper.show-fallback {
+            background: rgba(20, 20, 20, 0.85);
+        }
+
+        .winner-image-wrapper.show-fallback .winner-image-fallback {
+            display: block;
+        }
+
+        .trophy-container.custom-image .winner-name-overlay,
+        .trophy-container.custom-image .winner-record-overlay,
+        .trophy-container.custom-image .winner-name-svg {
+            display: none !important;
+        }
+
+        .custom-winner-text {
+            margin-top: 15px;
+            text-align: center;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .custom-winner-text .winner-inline-label {
+            font-size: 2.5rem;
+            font-weight: 600;
+        }
+
+        .custom-winner-text .winner-inline-label span {
+            font-weight: 700;
+            color: var(--winner-text, var(--winner, #00cc66));
+        }
+
+        .custom-winner-text .winner-inline-record {
+            font-size: 1rem;
+            opacity: 0.85;
+            letter-spacing: 0.5px;
+            color: var(--winner-record, var(--winner-text, var(--winner, #00cc66)));
+        }
+
+        .winner-inline-name {
+            color: var(--winner-text, var(--winner, #00cc66));
+        }
+
+        .winner-name-overlay {
+            position: absolute;
+            left: 50%;
+            top: 61.6%;
+            transform: translateX(-50%);
+            color: var(--winner-text, var(--winner, #00cc66));
+            font-weight: bold;
+            font-size: 18px;
+            text-align: center;
+            width: 180px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 5;
+            transform: translateX(-50%) perspective(200px) rotateX(15deg);
+            text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        .winner-name-svg {
+            fill: var(--winner-text, var(--winner, #00cc66));
+        }
+
+        .winner-record-overlay {
+            position: absolute;
+            left: 50.2%;
+            top: 79%;
+            transform: translateX(-50%);
+            color: var(--winner-record, var(--winner-text, #371F06));
+            font-weight: bold;
+            font-size: 14px;
+            text-align: center;
+            width: 100px;
+            z-index: 5;
+        }
+
+        .animated-trophy {
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5));
+        }
+
+        .trophy-body {
+            transform-origin: center bottom;
+            animation: trophyScale 0.5s cubic-bezier(0.2, 0.8, 0.2, 1.2) 0.8s forwards;
+            transform: scale(0);
+        }
+
+        .trophy-handles {
+            opacity: 0;
+            animation: fadeIn 0.5s ease 1.2s forwards;
+        }
+
+        .trophy-base {
+            transform: translateY(20px);
+            opacity: 0;
+            animation: slideUp 0.5s ease 1s forwards;
+        }
+
+        /* Background effects */
+        .ripple {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: transparent;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            animation: ripple 4s ease-out infinite;
+        }
+
+        /* Animations */
+        @keyframes cardEnter {
+            0% {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes textRise {
+            0% {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes trophyEnter {
+            0% {
+                transform: translateY(20px) scale(0.8);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes trophyScale {
+            0% {
+                transform: scale(0);
+            }
+
+            80% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes slideUp {
+            0% {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes ripple {
+            0% {
+                width: 0;
+                height: 0;
+                box-shadow: 0 0 0 0 rgba(var(--primary-rgb), 0.5);
+            }
+
+            100% {
+                width: 500vw;
+                height: 500vw;
+                box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0);
+            }
+        }
+
+        /* Responsive adjustments */
+        @media screen and (max-width: 1200px) {
+            .current-matches {
+                width: 380px;
+            }
+        }
+
+        @media screen and (max-width: 768px) {
+            .current-matches {
+                width: 340px;
+                padding: 16px;
+            }
+
+            .player.two-line .player-stats {
+                font-size: 1.1em;
+            }
+
+            .match-card {
+                border-radius: 10px;
+            }
+
+            .player.one-line,
+            .player.two-line .player-name,
+            .player.two-line .player-stats {
+                border-radius: 6px;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .current-matches {
+                width: 300px;
+                padding: 12px;
+            }
+
+            .player.one-line {
+                padding: 10px 14px;
+            }
+
+            .player.two-line {
+                padding: 6px;
+            }
+        }
+
+        @media screen and (max-width: 600px) {
+            .winner-name {
+                font-size: 2.5rem;
+            }
+
+            .winner-label {
+                font-size: 1.2rem;
+            }
+
+            .winner-card {
+                padding: 30px 20px;
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+            }
+
+            .stat-item {
+                padding: 0 10px;
+            }
+        }
+    </style>
+
+    <div id="tournamentWidget" class="tournament-view">
+        <div class="current-matches">
+            <div class="bracket-status" id="tournament-status">
+                Tournament Loading...
+            </div>
+            <div id="active-matches"></div>
+            <div id="remaining-matches" class="remaining-matches"></div>
+            <div id="standings-container"></div>
+        </div>
+    </div>
+
+    <script>
+        const CONFIG = {};
+
+        /**
+         * Get custom bracket names with automatic OR manual short names based on toggle
+         */
+        function getBracketNames() {
+            const customNames = CONFIG.tournamentData.settings?.customBracketNames || {};
+            const useManual = CONFIG.tournamentData.settings?.useManualShortNames || false;
+            const winnersLong = customNames.winnersTitle || 'Winners';
+            const losersLong = customNames.losersTitle || 'Losers';
+
+            return {
+                winners: winnersLong,
+                losers: losersLong,
+                winnersShort: useManual && customNames.winnersShortTitle ?
+                    customNames.winnersShortTitle :
+                    createShortBracketName(winnersLong, 'Winners'),
+                losersShort: useManual && customNames.losersShortTitle ?
+                    customNames.losersShortTitle :
+                    createShortBracketName(losersLong, 'Losers'),
+                singleElimination: customNames.singleEliminationTitle || 'Single Elimination',
+                finals: customNames.finalsTitle || 'Finals'
+            };
+        }
+
+        /**
+         * Creates a short version of bracket names
+         */
+        function createShortBracketName(fullName, defaultShort) {
+            if (!fullName || fullName.trim() === '') {
+                return defaultShort;
+            }
+
+            const name = fullName.trim();
+
+            if (name.length <= 14) {
+                return name;
+            }
+
+            const suffixPatterns = [
+                { regex: /^(.+?)\s+(Bracket|Round|Side|Tournament|Competition|Event)$/i, replacement: '$1' },
+                { regex: /^(.+?)\s+(Tournament|Competition|Event)\s+.+$/i, replacement: '$1' },
+            ];
+
+            for (const pattern of suffixPatterns) {
+                if (pattern.regex.test(name)) {
+                    const shortName = name.replace(pattern.regex, pattern.replacement).trim();
+                    if (shortName.length > 0 && shortName.length <= 14) {
+                        return shortName;
+                    }
+                }
+            }
+
+            if (name.length >= 16) {
+                let smartShort = name;
+
+                const hasUserAbbreviations = /\b(Div|Sec|Qual|Elim|Champ)\b/i.test(name);
+
+                const smartReplacements = [
+                    { from: /\bChampionship\b/gi, to: hasUserAbbreviations ? 'Championship' : 'Champion' },
+                    { from: /\bTournament\b/gi, to: '' },
+                    { from: /\bCompetition\b/gi, to: '' },
+                    { from: /\bDivision\b/gi, to: 'Div' },
+                    { from: /\bSection\b/gi, to: 'Sec' },
+                    { from: /\bBracket\b/gi, to: '' },
+                    { from: /\bRound\b/gi, to: 'R' },
+                    { from: /\bElimination\b/gi, to: hasUserAbbreviations ? 'Elimination' : 'Elim' },
+                    { from: /\bQualifier\b/gi, to: 'Qual' },
+                    { from: /\bPreliminary\b/gi, to: 'Prelim' },
+                    { from: /\bSemifinal\b/gi, to: 'Semi' },
+                ];
+
+                for (const replacement of smartReplacements) {
+                    smartShort = smartShort.replace(replacement.from, replacement.to);
+                }
+
+                smartShort = smartShort.replace(/\s+/g, ' ').trim();
+
+                if (smartShort.length > 0 && smartShort.length <= 14) {
+                    return smartShort;
+                }
+            }
+
+            const words = name.split(/\s+/);
+            if (words.length > 0) {
+                const firstWord = words[0];
+                if (firstWord.length >= 3 && firstWord.length <= 14) {
+                    return firstWord;
+                }
+            }
+
+            if (name.length > 14) {
+                return name.substring(0, 13) + '…';
+            }
+
+            return defaultShort;
+        }
+
+        /**
+         * Function to create shortened status text
+         */
+        function createShortStatus(status, bracketNames) {
+            if (status === 'Champion') return 'Champion';
+            if (status === 'Eliminated') return 'Eliminated';
+            if (status === bracketNames.finals) return 'Finals';
+            if (status === `True ${bracketNames.finals}`) return 'True Finals';
+
+            const winnersPattern = new RegExp(`^(.*?)\\s*in\\s*${bracketNames.winners}(?:\\s*Round\\s*(\\d+))?$`, 'i');
+            const losersPattern = new RegExp(`^(.*?)\\s*in\\s*${bracketNames.losers}(?:\\s*Round\\s*(\\d+))?$`, 'i');
+            const bracketRoundPattern = new RegExp(`^${bracketNames.winners}\\s*Round\\s*(\\d+)$`, 'i');
+            const losersRoundPattern = new RegExp(`^${bracketNames.losers}\\s*Round\\s*(\\d+)$`, 'i');
+
+            let match = status.match(winnersPattern);
+            if (match) {
+                const roundNum = match[2];
+                return roundNum ? `${bracketNames.winnersShort} R${roundNum}` : `${bracketNames.winnersShort}`;
+            }
+
+            match = status.match(losersPattern);
+            if (match) {
+                const roundNum = match[2];
+                return roundNum ? `${bracketNames.losersShort} R${roundNum}` : `${bracketNames.losersShort}`;
+            }
+
+            match = status.match(bracketRoundPattern);
+            if (match) {
+                return `${bracketNames.winnersShort} R${match[1]}`;
+            }
+
+            match = status.match(losersRoundPattern);
+            if (match) {
+                return `${bracketNames.losersShort} R${match[1]}`;
+            }
+
+            if (status.includes('Waiting in')) {
+                if (status.includes(bracketNames.winners)) {
+                    return `${bracketNames.winnersShort}`;
+                }
+                if (status.includes(bracketNames.losers)) {
+                    return `${bracketNames.losersShort}`;
+                }
+            }
+
+            return status;
+        }
+
+        /**
+         * Function to get status badge class
+         */
+        function getStatusBadgeClass(status) {
+            const statusLower = status.toLowerCase();
+
+            if (statusLower === 'champion') return 'champion';
+            if (statusLower === 'eliminated') return 'eliminated';
+            if (statusLower.includes('finals')) return 'finalist';
+            if (statusLower.includes('winners') || statusLower.includes('main')) return 'winners';
+            if (statusLower.includes('losers') || statusLower.includes('redemption')) return 'losers';
+
+            return '';
+        }
+
+        /**
+         * Create player stats badges
+         */
+        function createPlayerStats(player, settings) {
+            const stats = [];
+
+            if (settings.showSeed) {
+                stats.push(`Seed #${player.seed}`);
+            }
+
+            if (settings.showWins) {
+                stats.push(`${player.wins || 0}W`);
+            }
+
+            if (settings.showLosses) {
+                stats.push(`${player.losses}L`);
+            }
+
+            if (settings.showRecord) {
+                const totalGames = (player.wins || 0) + player.losses;
+                const percentage = totalGames > 0 ?
+                    Math.round(((player.wins || 0) / totalGames) * 100) : 0;
+                stats.push(`${percentage}%`);
+            }
+
+            if (stats.length === 0) {
+                stats.push(`${player.losses} Loss${player.losses !== 1 ? 'es' : ''}`);
+            }
+
+            if (settings.coloredStatBadges) {
+                return stats.map((stat, index) => {
+                    let badgeClass = 'stat-badge';
+                    if (stat.includes('Seed')) badgeClass += ' seed';
+                    else if (stat.includes('W')) badgeClass += ' wins';
+                    else if (stat.includes('L')) badgeClass += ' losses';
+                    else if (stat.includes('%')) badgeClass += ' percentage';
+
+                    return `<span class="${badgeClass}">${stat}</span>`;
+                }).join('');
+            } else {
+                if (settings.twoLineLayout) {
+                    return `<span>${stats.join(' | ')}</span>`;
+                }
+                return stats.join(' | ');
+            }
+        }
+
+        /**
+         * Main function to create standings for all tournament types
+         */
+        function createTournamentStandings(tournamentData, settings) {
+            if (!settings.showStandings) {
+                console.log("Standings display disabled by user setting");
+                return '';
+            }
+
+            const format = tournamentData.settings.format || 'double-elimination';
+            console.log("Creating standings for tournament format:", format);
+
+            if (format === 'round-robin') {
+                return createRoundRobinStandings(tournamentData, settings);
+            } else if (format === 'single-elimination' || format === 'double-elimination') {
+                return createEliminationStandings(tournamentData, settings, format);
+            }
+
+            return '';
+        }
+
+        /**
+         * Creates standings for round-robin tournaments
+         */
+        function createRoundRobinStandings(tournamentData, settings) {
+            if (!tournamentData.standings) return '';
+
+            let sortedStandings = Object.entries(tournamentData.standings)
+                .sort(([, a], [, b]) => b.points - a.points);
+
+            const maxVisible = Math.min(Math.max(settings.maxVisibleStandings || 5, 1), 10);
+            const visibleStandings = sortedStandings.slice(0, maxVisible);
+            const twoLineClass = settings.standingsTwoLineLayout ? 'two-line' : '';
+
+            return `
+                <div class="standings ${settings.splitStandings ? 'split' : ''}">
+                    <h3>Standings</h3>
+                    ${visibleStandings.map(([player, stats], index) => {
+                const rankNum = index + 1;
+                const rankClass = rankNum <= 5 ? `rank-${rankNum}` : 'rank-other';
+
+                return `
+                            <div class="standing-row ${twoLineClass}" style="--row-index: ${index};">
+                                ${settings.standingsTwoLineLayout ? `
+                                    <span class="rank ${rankClass}">${rankNum}</span>
+                                    <div class="standing-header">
+                                        <span class="player-name standings-player-name">${player}</span>
+                                    </div>
+                                    <div class="standing-stats">
+                                        <div class="stats-section">
+                                            <span class="stat-badge wins">${stats.wins}W</span>
+                                            ${settings.roundRobinSettings.allowDraws ?
+                            `<span class="stat-badge draws">${stats.draws}D</span>` : ''}
+                                            <span class="stat-badge losses">${stats.losses}L</span>
+                                            <span class="stat-badge points">${stats.points}pts</span>
+                                        </div>
+                                        <div class="status-section">
+                                            <span class="status-badge">Round Robin</span>
+                                        </div>
+                                    </div>
+                                ` : `
+                                    <span class="rank-badge ${rankClass}">${rankNum}</span>
+                                    <span class="player-name standings-player-name">${player}</span>
+                                    <span class="points">${stats.points} pts</span>
+                                    <span class="record">${stats.wins}-${stats.draws}-${stats.losses}</span>
+                                `}
+                            </div>
+                        `;
+            }).join('')}
+                </div>
+            `;
+        }
+
+        /**
+         * Function to create standings for single/double elimination tournaments
+         */
+        function createEliminationStandings(tournamentData, settings, format) {
+            console.log("Creating standings for elimination tournament:", format);
+            console.log("Tournament data:", JSON.stringify({
+                winner: tournamentData.winner ? tournamentData.winner.name : null,
+                winnersPlayers: tournamentData.winnersPlayers.length,
+                losersPlayers: tournamentData.losersPlayers.length,
+                currentMatches: tournamentData.currentMatches.length,
+                eliminatedPlayers: tournamentData.eliminatedPlayers.length,
+                bracketStage: tournamentData.bracketStage
+            }));
+
+            let players = [];
+            const bracketNames = getBracketNames();
+
+            if (tournamentData.winner) {
+                players.push({
+                    name: tournamentData.winner.name,
+                    rank: 1,
+                    status: 'Champion',
+                    wins: tournamentData.winner.wins,
+                    losses: tournamentData.winner.losses
+                });
+                console.log("Added champion:", tournamentData.winner.name);
+            }
+
+            if (tournamentData.bracketStage === 'final') {
+                console.log("Tournament is in finals stage");
+                tournamentData.currentMatches.forEach(match => {
+                    if (match.bracket === 'final') {
+                        if (!players.some(p => p.name === match.player1.name)) {
+                            players.push({
+                                name: match.player1.name,
+                                rank: 2,
+                                status: tournamentData.trueFinalPlayed ? `True ${bracketNames.finals}` : bracketNames.finals,
+                                wins: match.player1.wins,
+                                losses: match.player1.losses
+                            });
+                            console.log("Added finalist:", match.player1.name);
+                        }
+
+                        if (!players.some(p => p.name === match.player2.name)) {
+                            players.push({
+                                name: match.player2.name,
+                                rank: 2,
+                                status: tournamentData.trueFinalPlayed ? `True ${bracketNames.finals}` : bracketNames.finals,
+                                wins: match.player2.wins,
+                                losses: match.player2.losses
+                            });
+                            console.log("Added finalist:", match.player2.name);
+                        }
+                    }
+                });
+            }
+
+            tournamentData.currentMatches.forEach(match => {
+                if (match.bracket !== 'final') {
+                    if (!players.some(p => p.name === match.player1.name)) {
+                        let status = '';
+                        let rank = 2;
+
+                        if (match.bracket === 'winners') {
+                            status = `${bracketNames.winners} Round ${match.round}`;
+                            rank = tournamentData.winner ? 2 : 1;
+                        } else if (match.bracket === 'losers') {
+                            status = `${bracketNames.losers} Round ${match.round}`;
+                            rank = tournamentData.winner ? 3 : 2;
+                        }
+
+                        players.push({
+                            name: match.player1.name,
+                            rank: rank,
+                            status: status,
+                            wins: match.player1.wins,
+                            losses: match.player1.losses
+                        });
+                        console.log(`Added player from current match: ${match.player1.name} (${status})`);
+                    }
+
+                    if (!players.some(p => p.name === match.player2.name)) {
+                        let status = '';
+                        let rank = 2;
+
+                        if (match.bracket === 'winners') {
+                            status = `${bracketNames.winners} Round ${match.round}`;
+                            rank = tournamentData.winner ? 2 : 1;
+                        } else if (match.bracket === 'losers') {
+                            status = `${bracketNames.losers} Round ${match.round}`;
+                            rank = tournamentData.winner ? 3 : 2;
+                        }
+
+                        players.push({
+                            name: match.player2.name,
+                            rank: rank,
+                            status: status,
+                            wins: match.player2.wins,
+                            losses: match.player2.losses
+                        });
+                        console.log(`Added player from current match: ${match.player2.name} (${status})`);
+                    }
+                }
+            });
+
+            if (tournamentData.winnersPlayers.length > 0) {
+                tournamentData.winnersPlayers.forEach(player => {
+                    if (!players.some(p => p.name === player.name)) {
+                        const nextRound = (tournamentData.winnersRound || 1) + 1;
+                        players.push({
+                            name: player.name,
+                            rank: tournamentData.winner ? 2 : 1,
+                            status: `${bracketNames.winners} Round ${nextRound}`,
+                            wins: player.wins,
+                            losses: player.losses
+                        });
+                    }
+                });
+            }
+
+            if (format === 'double-elimination' && tournamentData.losersPlayers.length > 0) {
+                tournamentData.losersPlayers.forEach(player => {
+                    if (!players.some(p => p.name === player.name)) {
+                        const nextRound = (tournamentData.losersRound || 1) + 1;
+                        players.push({
+                            name: player.name,
+                            rank: tournamentData.winner ? 3 : 2,
+                            status: `${bracketNames.losers} Round ${nextRound}`,
+                            wins: player.wins,
+                            losses: player.losses
+                        });
+                    }
+                });
+            }
+
+            if (tournamentData.eliminatedPlayers.length > 0) {
+                tournamentData.eliminatedPlayers.forEach((player, index) => {
+                    if (!players.some(p => p.name === player.name)) {
+                        players.push({
+                            name: player.name,
+                            rank: 4,
+                            status: 'Eliminated',
+                            wins: player.wins,
+                            losses: player.losses
+                        });
+                        console.log("Added eliminated player:", player.name);
+                    }
+                });
+            }
+
+            players.sort((a, b) => {
+                if (a.rank !== b.rank) return a.rank - b.rank;
+                if (b.wins !== a.wins) return b.wins - a.wins;
+                if (a.losses !== b.losses) return a.losses - b.losses;
+                return a.name.localeCompare(b.name);
+            });
+
+            console.log("Sorted players for standings:", players.map(p => `${p.name} (${p.status})`).join(', '));
+
+            const maxVisible = Math.min(Math.max(settings.maxVisibleStandings || 5, 1), 10);
+            const visiblePlayers = players.slice(0, maxVisible);
+            const twoLineClass = settings.standingsTwoLineLayout ? 'two-line' : '';
+
+            return `
+                <div class="standings ${settings.splitStandings ? 'split' : ''}">
+                    <h3>Tournament Standings</h3>
+                    ${visiblePlayers.map((player, index) => {
+                const rankNum = player.rank;
+                const rankClass = rankNum <= 5 ? `rank-${rankNum}` : 'rank-other';
+                const shortStatus = createShortStatus(player.status, bracketNames);
+                const statusBadgeClass = getStatusBadgeClass(shortStatus);
+
+                return `
+                            <div class="standing-row ${twoLineClass}" style="--row-index: ${index};">
+                                ${settings.standingsTwoLineLayout ? `
+                                    <span class="rank ${rankClass}">${rankNum}</span>
+                                    <div class="standing-header">
+                                        <span class="player-name standings-player-name">${player.name}</span>
+                                    </div>
+                                    <div class="standing-stats">
+                                        <div class="stats-section">
+                                            <span class="stat-badge wins">${player.wins}W</span>
+                                            <span class="stat-badge losses">${player.losses}L</span>
+                                        </div>
+                                        <div class="status-section">
+                                            <span class="status-badge ${statusBadgeClass}">${shortStatus}</span>
+                                        </div>
+                                    </div>
+                                ` : `
+                                    <span class="rank-badge ${rankClass}">${rankNum}</span>
+                                    <span class="player-name standings-player-name">${player.name}</span>
+                                    <span class="status">${shortStatus}</span>
+                                    <span class="record">${player.wins}-${player.losses}</span>
+                                `}
+                            </div>
+                        `;
+            }).join('')}
+                </div>
+            `;
+        }
+
+        /**
+         * Handles the creation and display of confetti animation
+         */
+        function createConfetti(element, count = 30) {
+            const colors = ['#FFD700', '#FF0000', '#00FF00', '#0000FF', CONFIG.styles.accentColor];
+
+            for (let i = 0; i < count; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = `${Math.random() * 100}%`;
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animation = `confettiFall ${1 + Math.random() * 2}s linear`;
+
+                element.appendChild(confetti);
+
+                confetti.addEventListener('animationend', () => {
+                    confetti.remove();
+                });
+            }
+        }
+
+        function getWinnerDisplaySettings() {
+            return CONFIG.settings || CONFIG.tournamentData?.settings || {};
+        }
+
+        function getWinnerImageUrl() {
+            const settings = getWinnerDisplaySettings() || {};
+            const graphicType = settings.winnerGraphicType || 'trophy';
+            if (graphicType !== 'custom') {
+                return null;
+            }
+
+            const mode = settings.winnerImageMode || 'url';
+            if (mode === 'local') {
+                if (!settings.winnerImageToken) {
+                    return null;
+                }
+                const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
+                return `${protocol}://${window.location.hostname}:7472/resource/${settings.winnerImageToken}`;
+            }
+
+            if (typeof settings.winnerImageUrl === 'string' && settings.winnerImageUrl.trim()) {
+                return settings.winnerImageUrl.trim();
+            }
+
+            return null;
+        }
+
+        function createWinnerGraphicMarkup() {
+            const customUrl = getWinnerImageUrl();
+            if (!customUrl) {
+                return createAnimatedTrophy();
+            }
+
+            const safeUrl = customUrl.replace(/"/g, '&quot;');
+            return `
+                <div class="trophy-container custom-image">
+            <div class="winner-image-wrapper">
+                <img src="${safeUrl}" alt="Tournament Winner Graphic" />
+                <div class="winner-image-fallback"></div>
+            </div>
+            <div class="winner-name-overlay"></div>
+            <div class="winner-record-overlay"></div>
+            <div class="custom-winner-text">
+                <div class="winner-inline-label"><span class="winner-inline-name"></span></div>
+                <div class="winner-inline-record"></div>
+            </div>
+        </div>`;
+        }
+
+        function initializeWinnerImage(container, winner) {
+            const imageWrapper = container.querySelector('.winner-image-wrapper');
+            if (!imageWrapper) {
+                return;
+            }
+
+            const img = imageWrapper.querySelector('img');
+            const fallback = imageWrapper.querySelector('.winner-image-fallback');
+
+            if (fallback) {
+                const initials = (winner?.name || '?')
+                    .trim()
+                    .split(/\s+/)
+                    .slice(0, 2)
+                    .map(part => part.charAt(0).toUpperCase())
+                    .join('') || '?';
+                fallback.textContent = initials;
+            }
+
+            const showFallback = () => {
+                imageWrapper.classList.add('show-fallback');
+            };
+
+            const showImage = () => {
+                imageWrapper.classList.add('has-image');
+                imageWrapper.classList.remove('show-fallback');
+            };
+
+            if (!img) {
+                showFallback();
+                return;
+            }
+
+            if (img.complete && img.naturalWidth > 0) {
+                showImage();
+            } else {
+                img.addEventListener('load', showImage, { once: true });
+                img.addEventListener('error', showFallback, { once: true });
+            }
+        }
+
+        function showWinnerDisplay(winner) {
+            console.log('showWinnerDisplay called with winner:', winner);
+            if (!CONFIG.settings.showWinnerDisplay) return;
+
+            console.log('Creating winner display...');
+
+            const tournamentView = document.querySelector('.tournament-view');
+            tournamentView.classList.add('hidden');
+
+            const winnerDisplay = document.createElement('div');
+            winnerDisplay.className = 'winner-display';
+            winnerDisplay.innerHTML = `
+                <div class="winner-card">
+                    <div class="winner-card-inner">
+                        ${createWinnerGraphicMarkup()}
+                        <div class="winner-text-container">
+                            <div class="winner-label">Tournament Champion</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const nameSvgText = winnerDisplay.querySelector('.winner-name-svg textPath');
+            if (nameSvgText) {
+                nameSvgText.textContent = winner.name;
+            }
+            const winnerNameOverlay = winnerDisplay.querySelector('.winner-name-overlay');
+            if (winnerNameOverlay) {
+                winnerNameOverlay.textContent = winner.name;
+                setTimeout(() => fitText(winnerNameOverlay), 50);
+            }
+            const inlineName = winnerDisplay.querySelector('.winner-inline-name');
+            if (inlineName) {
+                inlineName.textContent = winner.name;
+            }
+
+            const recordOverlay = winnerDisplay.querySelector('.winner-record-overlay');
+            if (recordOverlay) {
+                recordOverlay.textContent = `${winner.wins}W - ${winner.losses}L`;
+                setTimeout(() => {
+                    fitText(recordOverlay);
+                }, 50);
+            }
+            const inlineRecord = winnerDisplay.querySelector('.winner-inline-record');
+            if (inlineRecord) {
+                inlineRecord.textContent = `${winner.wins}W - ${winner.losses}L`;
+            }
+
+            document.body.appendChild(winnerDisplay);
+            initializeWinnerImage(winnerDisplay, winner);
+            createEnhancedConfetti(winnerDisplay);
+
+            setTimeout(() => {
+                winnerDisplay.classList.add('animate-in');
+            }, 100);
+
+            const displayTime = parseInt(CONFIG.settings.displayDuration) * 1000 || 30000;
+            if (displayTime > 0) {
+                setTimeout(() => {
+                    winnerDisplay.classList.add('animate-out');
+                    setTimeout(() => {
+                        if (document.body.contains(winnerDisplay)) {
+                            document.body.removeChild(winnerDisplay);
+                        }
+                    }, 1000);
+                }, displayTime);
+            }
+        }
+
+        function createEnhancedConfetti(element) {
+            const canvas = document.createElement('canvas');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            canvas.style.position = 'fixed';
+            canvas.style.top = 0;
+            canvas.style.left = 0;
+            canvas.style.pointerEvents = 'none';
+            canvas.style.zIndex = 999;
+            document.body.appendChild(canvas);
+
+            const ctx = canvas.getContext('2d');
+            const particles = [];
+            const colors = ['#FFD700', '#FF0000', '#00FF00', '#0000FF', CONFIG.styles.accentColor, '#FFFFFF'];
+
+            for (let i = 0; i < 200; i++) {
+                const type = Math.random() < 0.3 ? 'confetti' : (Math.random() < 0.6 ? 'star' : 'circle');
+
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: -20 - Math.random() * 100,
+                    size: 5 + Math.random() * 15,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    speed: 1 + Math.random() * 5,
+                    rotation: Math.random() * 360,
+                    rotationSpeed: -1 + Math.random() * 2,
+                    type: type,
+                    opacity: 0.8 + Math.random() * 0.2
+                });
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                let stillAlive = false;
+                particles.forEach(p => {
+                    p.y += p.speed;
+                    p.rotation += p.rotationSpeed;
+
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rotation * Math.PI / 180);
+                    ctx.globalAlpha = p.opacity;
+                    ctx.fillStyle = p.color;
+
+                    if (p.type === 'confetti') {
+                        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                    } else if (p.type === 'star') {
+                        drawStar(ctx, 0, 0, 5, p.size / 2, p.size / 4);
+                    } else {
+                        ctx.beginPath();
+                        ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    ctx.restore();
+
+                    if (p.y < canvas.height + 50) stillAlive = true;
+                });
+
+                if (stillAlive) requestAnimationFrame(animate);
+                else canvas.remove();
+            }
+
+            function drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius) {
+                let rot = Math.PI / 2 * 3;
+                let x = cx;
+                let y = cy;
+                const step = Math.PI / spikes;
+
+                ctx.beginPath();
+                for (let i = 0; i < spikes; i++) {
+                    x = cx + Math.cos(rot) * outerRadius;
+                    y = cy + Math.sin(rot) * outerRadius;
+                    ctx.lineTo(x, y);
+                    rot += step;
+
+                    x = cx + Math.cos(rot) * innerRadius;
+                    y = cy + Math.sin(rot) * innerRadius;
+                    ctx.lineTo(x, y);
+                    rot += step;
+                }
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            animate();
+        }
+
+        function createAnimatedTrophy() {
+            return `
+        <div class="trophy-container">
+            <svg width="426" height="426"><defs><radialGradient id="e" cx="0" cy="0" r="1" gradientTransform="matrix(2.645 -.029 .003 23.596 162.814 108.379)" href="#d"><stop offset=".23" stop-color="#fef376"/><stop offset="1"/></radialGradient><radialGradient id="f" cx="0" cy="0" r="1" gradientTransform="matrix(.029 2.645 -23.596 .003 160.892 106.57)" href="#d"><stop offset=".23" stop-color="#fef376"/><stop offset="1"/></radialGradient><radialGradient id="g" cx="0" cy="0" r="1" gradientTransform="matrix(1.572 -1.606 14.171 14.167 163.912 107.6)" href="#d"><stop offset=".23" stop-color="#fef376"/><stop offset="1"/></radialGradient><radialGradient id="h" cx="0" cy="0" r="1" gradientTransform="matrix(1.606 1.572 -14.167 14.171 161.671 107.668)" href="#d"><stop offset=".23" stop-color="#fef376"/><stop offset="1"/></radialGradient><radialGradient id="i" cx="0" cy="0" r="1" gradientTransform="rotate(39.009 -438.046 343.688) scale(31.505)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="j" cx="0" cy="0" r="1" gradientTransform="scale(-35.544 35.544) rotate(80.203 -7.3 2.051)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="k" cx="0" cy="0" r="1" gradientTransform="rotate(39.01 -415.414 291.562) scale(32.878)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="l" cx="0" cy="0" r="1" gradientTransform="scale(-35.473 35.473) rotate(80.203 -6.697 2.23)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="m" cx="0" cy="0" r="1" gradientTransform="rotate(39.01 -384.32 254.102) scale(31.205)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="n" cx="0" cy="0" r="1" gradientTransform="scale(-30.898 30.898) rotate(80.204 -7.111 2.587)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="o" cx="0" cy="0" r="1" gradientTransform="rotate(39.01 -345.694 222.938) scale(30.506)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="p" cx="0" cy="0" r="1" gradientTransform="scale(-27.293 27.293) rotate(80.203 -7.395 2.75)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="q" cx="0" cy="0" r="1" gradientTransform="rotate(39.01 -296.286 194.417) scale(33.893)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="r" cx="0" cy="0" r="1" gradientTransform="scale(-27.016 27.016) rotate(80.203 -6.814 2.31)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="s" cx="0" cy="0" r="1" gradientTransform="rotate(39.009 -260.427 189.66) scale(29.23)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="t" cx="0" cy="0" r="1" gradientTransform="scale(-21.937 21.937) rotate(80.205 -7.91 2.388)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="u" cx="0" cy="0" r="1" gradientTransform="rotate(39.01 -220.676 189.32) scale(26.961)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="v" cx="0" cy="0" r="1" gradientTransform="scale(-19.56 19.56) rotate(80.203 -8.423 1.902)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="w" cx="0" cy="0" r="1" gradientTransform="rotate(39.01 -184.005 199.415) scale(23.527)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="x" cx="0" cy="0" r="1" gradientTransform="scale(-17.663 17.663) rotate(80.205 -9.002 1.101)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="y" cx="0" cy="0" r="1" gradientTransform="rotate(-20.597 816.838 -213.808) scale(86.195)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="z" cx="0" cy="0" r="1" gradientTransform="matrix(18.202 28.096 25.195 -17.705 109.605 141.334)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="A" cx="0" cy="0" r="1" gradientTransform="scale(-31.505 31.505) rotate(39.009 -20.56 -8.214)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="B" cx="0" cy="0" r="1" gradientTransform="rotate(80.203 -45.14 324.659) scale(35.544)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="C" cx="0" cy="0" r="1" gradientTransform="scale(-32.878 32.878) rotate(39.01 -19.014 -9.456)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="D" cx="0" cy="0" r="1" gradientTransform="rotate(80.203 -23.2 330.892) scale(35.473)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="E" cx="0" cy="0" r="1" gradientTransform="scale(-31.205 31.205) rotate(39.01 -19.037 -11.163)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="F" cx="0" cy="0" r="1" gradientTransform="rotate(80.204 -5.376 331.69) scale(30.898)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="G" cx="0" cy="0" r="1" gradientTransform="scale(-30.506 30.506) rotate(39.01 -18.207 -12.44)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="H" cx="0" cy="0" r="1" gradientTransform="rotate(80.203 12.542 326.819) scale(27.293)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="I" cx="0" cy="0" r="1" gradientTransform="scale(-33.893 33.893) rotate(39.01 -14.93 -12.039)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="J" cx="0" cy="0" r="1" gradientTransform="rotate(80.203 30.264 314.178) scale(27.016)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="K" cx="0" cy="0" r="1" gradientTransform="scale(-29.23 29.23) rotate(39.01 -16.084 -14.122)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="L" cx="0" cy="0" r="1" gradientTransform="rotate(80.205 40.839 304.144) scale(21.937)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="M" cx="0" cy="0" r="1" gradientTransform="matrix(-20.95 16.971 16.971 20.95 356.01 178.805)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="N" cx="0" cy="0" r="1" gradientTransform="rotate(80.203 49.607 288.95) scale(19.559)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="O" cx="0" cy="0" r="1" gradientTransform="scale(-23.527 23.527) rotate(39.01 -16.735 -17.131)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="P" cx="0" cy="0" r="1" gradientTransform="rotate(80.205 55.356 271.198) scale(17.663)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="Q" cx="0" cy="0" r="1" gradientTransform="scale(-86.195 86.195) rotate(-20.597 6.932 11.105)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="R" cx="0" cy="0" r="1" gradientTransform="matrix(-18.202 28.096 -25.195 -17.705 316.368 139.018)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="a" cx="0" cy="0" r="1" gradientTransform="rotate(94.623 115.477 185.067) scale(42.658)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="X" cx="0" cy="0" r="1" gradientTransform="rotate(113.882 147.025 150.142) scale(108.862)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="Y" cx="0" cy="0" r="1" gradientTransform="rotate(-64.576 279.355 -108.584) scale(97.472)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="b" cx="0" cy="0" r="1" gradientTransform="scale(42.658 -42.658) rotate(-85.377 .299 -2.47)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="aa" cx="0" cy="0" r="1" gradientTransform="matrix(44.073 99.541 99.541 -44.073 82.187 75.801)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="ab" cx="0" cy="0" r="1" gradientTransform="scale(-97.472 97.472) rotate(-64.576 .675 2.34)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="c" cx="0" cy="0" r="1" gradientTransform="rotate(90 88.069 140.217) scale(164.564)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="af" cx="0" cy="0" r="1" gradientTransform="matrix(86.631 0 0 11.874 213.57 68.406)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></radialGradient><radialGradient id="ak" cx="0" cy="0" r="1" gradientTransform="rotate(90 -49.986 268.622) scale(12.783)" href="#d"><stop offset=".23" stop-color="#fef376"/><stop offset="1"/></radialGradient><radialGradient id="al" cx="0" cy="0" r="1" gradientTransform="matrix(2.212 -.024 .003 19.736 225.217 312.305)" href="#d"><stop offset=".23" stop-color="#fef376"/><stop offset="1"/></radialGradient><radialGradient id="am" cx="0" cy="0" r="1" gradientTransform="matrix(.024 2.212 -19.736 .003 223.61 310.792)" href="#d"><stop offset=".23" stop-color="#fef376"/><stop offset="1"/></radialGradient><radialGradient id="an" cx="0" cy="0" r="1" gradientTransform="matrix(1.315 -1.344 11.853 11.85 226.136 311.654)" href="#d"><stop offset=".23" stop-color="#fef376"/><stop offset="1"/></radialGradient><radialGradient id="ao" cx="0" cy="0" r="1" gradientTransform="matrix(1.344 1.315 -11.85 11.853 224.261 311.71)" href="#d"><stop offset=".23" stop-color="#fef376"/><stop offset="1"/></radialGradient><linearGradient id="d" gradientUnits="userSpaceOnUse"/><linearGradient id="S" x2="1" gradientTransform="matrix(69.679 52.545 -27.568 36.557 178.154 284.188)" href="#d"><stop offset=".06" stop-color="#371f06"/><stop offset=".49" stop-color="#8c522d"/><stop offset=".94" stop-color="#31220d"/></linearGradient><linearGradient id="T" x2="1" gradientTransform="matrix(0 16.264 -1.466 0 214.475 363.563)" href="#d"><stop offset=".06" stop-color="#371f06"/><stop offset=".49" stop-color="#8c522d"/><stop offset=".94" stop-color="#31220d"/></linearGradient><linearGradient id="U" x2="1" gradientTransform="matrix(-68.115 -23.509 27.29 -79.071 229.519 346.73)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9b4d08"/></linearGradient><linearGradient id="V" x2="1" gradientTransform="matrix(-13.151 58.952 -149.314 -33.309 318.115 283.829)" href="#d"><stop stop-color="#e09e92"/><stop offset=".25" stop-color="#ebddd1"/><stop offset=".77" stop-color="#fefefe"/></linearGradient><linearGradient id="ad" x2="1" gradientTransform="matrix(63.97 -1.253 1.386 70.766 150.572 79.918)" href="#d"><stop stop-color="#9b4d08"/><stop offset=".25" stop-color="#b8940f"/><stop offset=".77" stop-color="#fede8a"/></linearGradient><linearGradient id="ae" x2="1" gradientTransform="matrix(-81.942 6.255 -14.936 -195.666 207.564 242.502)" href="#d"><stop stop-color="#e09e92"/><stop offset=".25" stop-color="#ebddd1"/><stop offset=".77" stop-color="#fefefe"/></linearGradient><linearGradient id="ai" x2="1" gradientTransform="matrix(0 16.407 -2.427 0 215.033 308.274)" href="#d"><stop offset=".23" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9b4d08"/></linearGradient><linearGradient id="aj" x2="1" gradientTransform="matrix(-.337 22.242 -14.337 -.217 195.895 309.486)" href="#d"><stop stop-color="#e09e92"/><stop offset=".25" stop-color="#ebddd1"/><stop offset=".77" stop-color="#fefefe"/></linearGradient><linearGradient id="ap" x2="1" gradientTransform="matrix(56.572 35.318 -13.944 22.335 189.747 314.407)" href="#d"><stop offset=".08" stop-color="#a4690a"/><stop offset=".51" stop-color="#fede8a"/><stop offset=".75" stop-color="#b8940f"/><stop offset="1" stop-color="#9c5a07"/></linearGradient><linearGradient id="aq" x2="1" gradientTransform="matrix(128.219 -6.562 -5.82 -113.718 37.863 313.033)" href="#d"><stop offset=".14" stop-color="#f16b50"/><stop offset=".36" stop-color="#af1f23"/><stop offset=".59" stop-color="#ef5225"/><stop offset=".75" stop-color="#c12d26"/><stop offset="1" stop-color="#7c1024"/></linearGradient><linearGradient id="ar" x2="1" gradientTransform="matrix(-72.321 -30.545 -23.132 54.767 177.811 304.811)" href="#d"><stop offset=".14" stop-color="#f16b50"/><stop offset=".36" stop-color="#af1f23"/><stop offset=".59" stop-color="#ef5225"/><stop offset=".75" stop-color="#c12d26"/><stop offset="1" stop-color="#7c1024"/></linearGradient><linearGradient id="as" x2="1" gradientTransform="matrix(-128.219 -6.562 5.82 -113.718 396.974 313.033)" href="#d"><stop offset=".14" stop-color="#f16b50"/><stop offset=".36" stop-color="#af1f23"/><stop offset=".59" stop-color="#ef5225"/><stop offset=".75" stop-color="#c12d26"/><stop offset="1" stop-color="#7c1024"/></linearGradient><linearGradient id="at" x1="300.464" x2="82.732" y1="298.957" y2="298.957" href="#d"><stop offset=".14" stop-color="#f16b50"/><stop offset=".36" stop-color="#af1f23"/><stop offset=".59" stop-color="#ef5225"/><stop offset=".75" stop-color="#c12d26"/><stop offset="1" stop-color="#7c1024"/></linearGradient><linearGradient id="au" x2="1" gradientTransform="matrix(72.321 -30.545 23.132 54.767 257.027 304.811)" href="#d"><stop offset=".14" stop-color="#f16b50"/><stop offset=".36" stop-color="#af1f23"/><stop offset=".59" stop-color="#ef5225"/><stop offset=".75" stop-color="#c12d26"/><stop offset="1" stop-color="#7c1024"/></linearGradient><path id="W" fill="url(#a)" d="M337.2 124.4c.1-13.4-7.9-25.8-19.9-30.8-12.6-5.3-28.8-2.3-43.2 8.1l3.5 15.8q1.2-1 2.5-2c13.6-10.3 35.4-13.2 40.7 7.1 4.6 17.6-8.9 35.1-23 43.8-12.3 7.6-26 10.4-40.9 11.2l-1.2 7.3h2.4c8.7-.2 17.4-1.2 25.8-3.3 17-4.2 32.4-13.4 42.7-27.7 6.9-9.6 10.5-19.8 10.6-29.5z"/><path id="Z" fill="url(#b)" d="M88.8 123.7c-.1-13.4 7.9-25.8 19.8-30.8 12.7-5.3 28.9-2.3 43.3 8.1l-3.6 15.8q-1.2-1-2.5-2c-13.5-10.3-35.3-13.2-40.6 7.1-4.6 17.6 8.9 35.1 23 43.8 12.3 7.6 25.9 10.4 40.8 11.2l1.3 7.2c-1.2.1-2.1.1-2.4.1-8.7-.2-17.4-1.2-25.9-3.3-16.9-4.3-32.3-13.4-42.6-27.7-6.9-9.6-10.6-19.8-10.6-29.5z"/><path id="ac" fill="url(#c)" d="M281.7 80.3H146.3V105c.9 40.6 21.4 78.4 45.3 112.7 1.1 1.5 7.3 12.5 8.7 12.5h27.4c1.4 0 7.7-11 8.7-12.5 23.9-34.3 44.5-72.1 45.3-112.7.2-8.2 0-16.5 0-24.7z"/><path id="ag" fill="#9f5f08" d="M214.4 242.8c-13.1 0-23.8-4.4-23.8-9.8s10.7-9.7 23.8-9.7c13.2 0 23.9 4.3 23.9 9.7s-10.7 9.8-23.9 9.8z"/><path id="ah" fill="#a16309" d="M214.4 242.6c-12.9 0-23.4-4.3-23.4-9.6s10.5-9.6 23.4-9.6c13 0 23.5 4.3 23.5 9.6s-10.5 9.6-23.5 9.6z"/></defs><path fill="url(#e)" d="M165.3 106.5c0 12.8-1.1 23.1-2.5 23.1-1.5 0-2.6-10.3-2.6-23.1 0-12.7 1.1-23.1 2.6-23.1 1.4 0 2.5 10.4 2.5 23.1z" opacity=".81" style="mix-blend-mode:color-dodge"/><path fill="url(#f)" d="M162.8 109.1c-12.8 0-23.1-1.2-23.1-2.6s10.3-2.6 23.1-2.6c12.7 0 23.1 1.2 23.1 2.6s-10.4 2.6-23.1 2.6z" opacity=".81" style="mix-blend-mode:color-dodge"/><path fill="url(#g)" d="M164.3 105c7.7 7.6 13.2 14.5 12.3 15.4-.8.8-7.7-4.7-15.4-12.3-7.7-7.7-13.2-14.6-12.3-15.5.8-.8 7.8 4.7 15.4 12.4z" opacity=".81" style="mix-blend-mode:color-dodge"/><path fill="url(#h)" d="M164.3 108.1c-7.6 7.6-14.6 13.1-15.4 12.3-.9-.9 4.6-7.8 12.3-15.4 7.7-7.7 14.6-13.2 15.4-12.4.9.9-4.6 7.8-12.3 15.5z" opacity=".81" style="mix-blend-mode:color-dodge"/><path fill="url(#i)" d="M131.8 356.4c9.4.9 27.2 2.9 27.8 3.2.6.7-11 7.1-21.2 7.1-10 .1-16-3.4-17-5.6-1.1-2.4.9-5.3 10.4-4.7z"/><path fill="url(#j)" d="M140.8 341.4c3.3 7.9 17.7 18.6 18.8 18.1.7-.2-4.3-11.9-8.2-19-4.2-7.1-7.6-10.1-9.7-9.9-1.9.2-4.6 3.1-.9 10.8z"/><path fill="url(#k)" d="M105.5 334.9c8.7 3.3 24.7 9.8 25.1 10.3.4.9-12.2 4-21.7 1.4-9.4-2.5-14.2-7.4-14.6-9.8-.3-2.5 2.3-4.8 11.2-1.9z"/><path fill="url(#l)" d="M118.1 322.9c1 8.5 11.4 22.5 12.5 22.3.8-.1-.6-12.6-2.3-20.4-1.9-7.9-4.4-11.6-6.4-12-1.9-.3-5.2 1.8-3.8 10.1z"/><path fill="url(#m)" d="M88.2 309.7c6.9 4.6 19 13.7 19.2 14.3.1.8-11.2.5-18.8-3.7-7.6-4-10.7-9.2-10.5-11.3.2-2.2 3.1-3.7 10.1.7z"/><path fill="url(#n)" d="M101.6 302c-.8 7.5 4.9 21.8 5.8 21.9.7.2 2.5-10.9 2.7-18.1.1-7.2-1.4-11.1-3.1-11.8-1.6-.7-4.9.4-5.4 8z"/><path fill="url(#o)" d="M76.7 280.5c5.2 5.6 13.9 16.6 13.9 17.1-.1.8-10.1-2.2-15.9-7.6-5.9-5.3-7.5-10.5-6.9-12.3.7-2 3.5-2.7 8.9 2.8z"/><path fill="url(#p)" d="M90.4 276.7c-2.3 6.6-.5 20.6.3 20.9.5.3 4.8-9.1 6.5-15.5 1.7-6.5 1.2-10.3-.2-11.4-1.3-.9-4.5-.7-6.6 6z"/><path fill="url(#q)" d="M71.3 246.4c3.8 7.3 9.8 21 9.7 21.5-.3.8-9.9-5-14.4-12.3-4.6-7.1-4.8-13-3.6-14.7 1.2-1.8 4.4-1.7 8.3 5.5z"/><path fill="url(#r)" d="M86.5 246.4c-4.2 6.1-6.2 21-5.4 21.5.5.4 7.3-7.9 10.9-14 3.5-6.1 4-10.1 3-11.6-1.1-1.4-4.5-2-8.5 4.1z"/><path fill="url(#s)" d="M74.9 220.9c1.8 6.7 4.3 19.3 4.1 19.7-.4.6-7.3-6.1-9.7-12.9-2.5-6.7-1.7-11.6-.4-12.8 1.3-1.3 3.9-.7 6 6z"/><path fill="url(#t)" d="M87.6 223.6c-4.6 4.4-9.1 16.4-8.6 17 .4.5 7.7-5.2 11.8-9.7 4-4.6 5.2-8 4.5-9.4-.6-1.4-3.3-2.5-7.7 2.1z"/><path fill="url(#u)" d="M84.1 194.4c.2 6.6-.4 18.6-.7 18.9-.5.5-5.2-7.1-5.9-13.8-.8-6.6 1.1-11 2.5-11.8 1.5-.9 3.8.1 4.1 6.7z"/><path fill="url(#v)" d="M95 199.4c-5.2 3.3-11.9 13.3-11.6 14 .2.4 8.1-3.2 12.8-6.5 4.8-3.4 6.6-6.4 6.4-7.9-.3-1.4-2.5-2.9-7.6.4z"/><path fill="url(#w)" d="M99.8 170.5c-1.4 6-4.8 16.5-5.2 16.8-.5.2-2.8-7.4-1.8-13.5.9-6 3.5-9.5 5-10s3.2.8 2 6.7z"/><path fill="url(#x)" d="M108.2 177.1c-5.4 2-13.7 9.6-13.5 10.2 0 .5 7.7-1.1 12.7-3.3 5-2.1 7.4-4.5 7.6-5.9.1-1.3-1.5-3.1-6.8-1z"/><path fill="url(#y)" d="M125.8 152.8q-4.4 3.4-8.3 7.1-4 3.6-7.5 7.3c-4.6 5.1-8.7 10.4-12.2 15.9-7.1 11-12 22.7-14.9 34.7S79.1 242 80 254.1s3.6 24 8 35.3 10.4 21.9 17.9 31.5c7.5 9.5 16.4 18 26.7 24.9 10.2 6.9 21.8 12.2 34.5 15.5 6.4 1.7 13 2.8 19.9 3.4q5.2.4 10.6.4 5.4 0 11-.4-5.6.6-11 .7-5.4 0-10.6-.3-10.4-.7-20.1-3.1c-12.8-3.1-24.6-8.4-35-15.2-10.4-6.9-19.5-15.4-27.1-25-7.6-9.7-13.7-20.4-18.2-31.9-4.4-11.4-7.1-23.5-8-35.7a116.83 116.83 0 0 1 3.1-36.7c3.1-12.1 8.2-23.9 15.4-34.8q5.5-8.2 12.6-15.7 3.6-3.8 7.6-7.3 4-3.5 8.5-6.9z"/><path fill="url(#z)" d="M114.7 157.1c-8.1 7-15.1 21.4-14.4 21.6.3.1 11-9.9 18.3-16.4 7.3-6.6 10.3-10.6 9.4-11.6-.7-1.1-5.5-.7-13.3 6.4z"/><path fill="url(#A)" d="m294.2 354-27.8 3.3c-.7.7 11 7 21.2 7.1 10 .1 16-3.4 17-5.6 1.1-2.4-.9-5.3-10.4-4.8z"/><path fill="url(#B)" d="M285.2 339.1c-3.3 7.9-17.7 18.6-18.8 18.1-.7-.2 4.3-11.9 8.2-19 4.1-7.1 7.6-10.1 9.7-9.9 1.9.2 4.6 3.1.9 10.8z"/><path fill="url(#C)" d="M320.5 332.6c-8.8 3.3-24.7 9.8-25.1 10.3-.4.9 12.1 3.9 21.7 1.4 9.4-2.5 14.2-7.4 14.5-9.8.4-2.6-2.3-4.9-11.1-1.9z"/><path fill="url(#D)" d="M307.9 320.6c-1.1 8.5-11.4 22.5-12.6 22.3-.7-.1.7-12.6 2.4-20.4 1.9-7.9 4.4-11.6 6.4-12 1.9-.3 5.2 1.8 3.8 10.1z"/><path fill="url(#E)" d="M337.8 307.4c-6.9 4.6-19 13.7-19.2 14.3-.1.8 11.2.5 18.8-3.7 7.5-4 10.6-9.2 10.4-11.3-.2-2.3-3-3.7-10 .7z"/><path fill="url(#F)" d="M324.4 299.6c.7 7.6-4.9 21.9-5.9 22-.6.2-2.4-10.9-2.6-18.1-.1-7.2 1.4-11.1 3.1-11.8 1.6-.7 4.9.4 5.4 7.9z"/><path fill="url(#G)" d="M349.3 278.2c-5.2 5.6-14 16.6-14 17.1.1.7 10.2-2.2 16-7.6 5.9-5.3 7.5-10.5 6.9-12.4-.7-1.9-3.5-2.6-8.9 2.9z"/><path fill="url(#H)" d="M335.5 274.3c2.3 6.6.6 20.7-.2 21-.6.2-4.8-9.1-6.6-15.5-1.6-6.5-1.1-10.3.3-11.4 1.2-1 4.4-.7 6.5 5.9z"/><path fill="url(#I)" d="M354.7 244.1c-3.8 7.3-9.9 21-9.7 21.5.2.8 9.9-5 14.4-12.3 4.5-7.1 4.7-13 3.6-14.7-1.3-1.8-4.4-1.7-8.3 5.5z"/><path fill="url(#J)" d="M339.4 244.1c4.3 6.1 6.2 21 5.5 21.5-.5.4-7.3-8-10.9-14-3.5-6.1-4.1-10.1-3-11.6 1.1-1.4 4.4-2 8.4 4.1z"/><path fill="url(#K)" d="M351.1 218.6c-1.9 6.7-4.3 19.3-4.1 19.7.4.6 7.2-6.1 9.7-12.9 2.5-6.7 1.6-11.6.4-12.8-1.4-1.3-4-.7-6 6z"/><path fill="url(#L)" d="M338.4 221.3c4.6 4.4 9 16.4 8.5 17-.3.5-7.6-5.2-11.7-9.7-4-4.6-5.2-8-4.6-9.5.6-1.3 3.3-2.4 7.8 2.2z"/><path fill="url(#M)" d="M341.9 192.1c-.2 6.5.4 18.6.7 18.9.5.4 5.2-7.1 5.9-13.8s-1.1-11-2.6-11.8c-1.5-.9-3.7.1-4 6.7z"/><path fill="url(#N)" d="M330.9 197.1c5.3 3.3 12 13.3 11.6 13.9-.1.5-8-3.1-12.8-6.4-4.7-3.5-6.6-6.4-6.3-7.9.2-1.4 2.4-2.9 7.5.4z"/><path fill="url(#O)" d="M326.2 168.2c1.4 5.9 4.8 16.5 5.1 16.8.5.2 2.8-7.4 1.9-13.5-.9-6-3.5-9.5-5-10s-3.2.8-2 6.7z"/><path fill="url(#P)" d="M317.8 174.8c5.4 2 13.6 9.6 13.5 10.2 0 .5-7.8-1.2-12.8-3.3-5-2.2-7.4-4.5-7.5-5.9-.1-1.3 1.5-3.1 6.8-1z"/><path fill="url(#Q)" d="M300.2 150.5q4.4 3.4 8.3 7 3.9 3.6 7.4 7.4c4.7 5.1 8.8 10.4 12.3 15.9 7.1 11 12 22.7 14.9 34.6 2.9 12 3.8 24.3 2.9 36.4s-3.7 24-8 35.3c-4.4 11.3-10.4 21.9-17.9 31.5-7.5 9.5-16.5 18-26.7 24.9-10.3 6.8-21.8 12.2-34.5 15.5-6.4 1.7-13 2.8-19.9 3.4q-5.2.4-10.6.4-5.4 0-11-.4 5.6.5 11 .6 5.4.1 10.6-.2 10.4-.7 20.1-3.1c12.8-3.1 24.5-8.4 34.9-15.3 10.5-6.8 19.6-15.3 27.2-24.9 7.6-9.7 13.7-20.5 18.2-31.9 4.4-11.4 7.1-23.5 8-35.7.9-12.3-.1-24.7-3.2-36.7a110.08 110.08 0 0 0-15.4-34.8q-5.4-8.2-12.6-15.7-3.5-3.8-7.5-7.3-4-3.6-8.5-6.9z"/><path fill="url(#R)" d="M311.2 154.7c8.1 7.1 15.2 21.5 14.5 21.7-.3.1-11-9.9-18.4-16.4-7.2-6.7-10.2-10.6-9.3-11.7.7-1 5.5-.6 13.2 6.4z"/><path fill="url(#S)" d="M260.3 369.5h-92.6v-44.4c0-2.3 1.9-4.2 4.3-4.2h84.1c2.3 0 4.2 1.9 4.2 4.2z"/><path fill="url(#T)" d="M157.9 379.6h112.2v-.2c0-5.5-4.5-9.9-10-9.9h-92.2c-5.5 0-10 4.4-10 9.9z"/><path fill="url(#U)" d="M237.9 293.9c-6.9-17.9-11.2-37.1-13-58.6h-21.8c-1.8 21.5-6.1 40.7-13 58.6-3.1 8-12.5 27.1-14.2 29.8h76.2c-1.6-2.7-11.1-21.8-14.2-29.8z"/><path fill="url(#V)" d="M210 279.6c2.6-14.6 6.2-29.7 4-44.4h-7.5c.2 7.1-.5 14.1-1.5 21-1.7 11.8-5.1 23-9.5 33.9-2.3 5.8-4.9 11.4-7.5 17-.9 1.8-6.8 16.6-8.2 16.6h15c5.5 0 10.5-24.8 11.8-29.3q2.2-7.3 3.4-14.8z" style="mix-blend-mode:multiply"/><use fill="url(#a)" href="#W"/><use fill="url(#X)" href="#W"/><path fill="url(#Y)" d="M326.6 119.1c-5.7-21.8-29.2-18.7-43.8-7.6q-1.4 1-2.7 2.2v-.1l-.8 1.6q-.9 1.1-1.7 2.2v.1c.8-.7-1 1.7-.2 1 13.6-10.3 36.8-17.2 42 3.1 4.6 17.7-7.5 36.1-21.6 44.8-11.6 7.2-24.3 10-38.2 11.1v.8c15.4-1.1 29.5-4.1 42.2-12 15.2-9.4 29.7-28.2 24.8-47.2z"/><use fill="url(#b)" href="#Z"/><use fill="url(#aa)" href="#Z"/><path fill="url(#ab)" d="M99.4 118.4c5.7-21.8 29.2-18.7 43.8-7.6q1.3 1 2.6 2.2l.1-.1q.3.8.8 1.6.8 1.1 1.7 2.2l-.1.1c-.8-.7 1.1 1.7.2 1-13.5-10.3-36.7-17.2-42 3.1-4.5 17.6 7.6 36.1 21.7 44.8 11.5 7.1 24.3 10 38.1 11v.8c-15.3-1-29.4-4-42.2-12-15.1-9.3-29.6-28.1-24.7-47.1z"/><use fill="url(#c)" href="#ac"/><use fill="url(#ad)" href="#ac" style="mix-blend-mode:multiply"/><path fill="url(#ae)" d="M211 217.5c-15.1-22-27-46.7-34.3-72.3-6.1-21.2-8.6-43.1-7-64.9h-12.2V105c.9 40.6 25.9 94.5 49.7 124.2 1.1 1.4 13.1 1 13.1 1q-4.9-6.3-9.3-12.7z" style="mix-blend-mode:multiply"/><path fill="url(#af)" d="M283.2 80.3H144.8a5.59 5.59 0 1 1 0-11.2h138.4a5.59 5.59 0 1 1 0 11.2z"/><g fill="#9c5a07"><path d="M194.3 227.3h39.5v10.6h-39.5z"/><path d="M214.4 243c-13.5 0-24.5-4.4-24.5-10 0-5.5 11-10 24.5-10 13.6 0 24.6 4.5 24.6 10 0 5.6-11 10-24.6 10z"/><path d="M214.4 243c-13.4 0-24.4-4.5-24.4-10s11-10 24.4-10c13.5 0 24.5 4.5 24.5 10s-11 10-24.5 10z"/></g><path fill="#9d5b07" d="M214.4 243c-13.4 0-24.3-4.5-24.3-10s10.9-9.9 24.3-9.9c13.5 0 24.4 4.4 24.4 9.9s-10.9 10-24.4 10z"/><path fill="#9d5c07" d="M214.4 243c-13.4 0-24.2-4.5-24.2-10s10.8-9.9 24.2-9.9c13.5 0 24.3 4.4 24.3 9.9s-10.8 10-24.3 10z"/><g fill="#9e5d07"><path d="M214.4 242.9c-13.3 0-24.2-4.4-24.2-9.9 0-5.4 10.9-9.9 24.2-9.9 13.4 0 24.3 4.5 24.3 9.9 0 5.5-10.9 9.9-24.3 9.9z"/><path d="M214.4 242.9c-13.3 0-24.1-4.4-24.1-9.9 0-5.4 10.8-9.8 24.1-9.8 13.4 0 24.2 4.4 24.2 9.8 0 5.5-10.8 9.9-24.2 9.9z"/></g><path fill="#9e5e08" d="M214.4 242.9c-13.2 0-24-4.4-24-9.9 0-5.4 10.8-9.8 24-9.8 13.3 0 24.1 4.4 24.1 9.8 0 5.5-10.8 9.9-24.1 9.9z"/><g fill="#9f5f08"><path d="M214.4 242.8c-13.2 0-23.9-4.4-23.9-9.8s10.7-9.8 23.9-9.8c13.3 0 24 4.4 24 9.8s-10.7 9.8-24 9.8z"/><use href="#ag"/></g><use fill="#9f6008" href="#ag"/><g fill="#a06108"><path d="M214.4 242.7c-13.1 0-23.7-4.3-23.7-9.7 0-5.3 10.6-9.7 23.7-9.7 13.2 0 23.8 4.4 23.8 9.7 0 5.4-10.6 9.7-23.8 9.7z"/><path d="M214.4 242.7c-13 0-23.6-4.3-23.6-9.7 0-5.3 10.6-9.6 23.6-9.6 13.1 0 23.7 4.3 23.7 9.6 0 5.4-10.6 9.7-23.7 9.7z"/></g><path fill="#a06209" d="M214.4 242.7c-13 0-23.5-4.4-23.5-9.7s10.5-9.6 23.5-9.6c13.1 0 23.6 4.3 23.6 9.6s-10.5 9.7-23.6 9.7z"/><use fill="#a16309" href="#ah"/><g fill="#a16409"><use href="#ah"/><path d="M214.4 242.6c-12.8 0-23.3-4.3-23.3-9.6 0-5.2 10.5-9.5 23.3-9.5 12.9 0 23.4 4.3 23.4 9.5 0 5.3-10.5 9.6-23.4 9.6z"/></g><path fill="#a26509" d="M214.4 242.5c-12.8 0-23.2-4.2-23.2-9.5 0-5.2 10.4-9.5 23.2-9.5 12.9 0 23.3 4.3 23.3 9.5 0 5.3-10.4 9.5-23.3 9.5z"/><path fill="#a26609" d="M214.4 242.5c-12.7 0-23.1-4.2-23.1-9.5 0-5.2 10.4-9.5 23.1-9.5 12.8 0 23.2 4.3 23.2 9.5 0 5.3-10.4 9.5-23.2 9.5z"/><path fill="#a2670a" d="M214.4 242.5c-12.7 0-23-4.3-23-9.5s10.3-9.4 23-9.4c12.8 0 23.1 4.2 23.1 9.4s-10.3 9.5-23.1 9.5z"/><path fill="#a3670a" d="M214.4 242.4c-12.7 0-23-4.2-23-9.4s10.3-9.4 23-9.4c12.8 0 23.1 4.2 23.1 9.4s-10.3 9.4-23.1 9.4z"/><path fill="#a3680a" d="M214.4 242.4c-12.6 0-22.9-4.2-22.9-9.4s10.3-9.4 22.9-9.4c12.7 0 23 4.2 23 9.4s-10.3 9.4-23 9.4z"/><g fill="#a4690a"><path d="M214.4 242.4c-12.6 0-22.8-4.2-22.8-9.4 0-5.1 10.2-9.3 22.8-9.3 12.7 0 22.9 4.2 22.9 9.3 0 5.2-10.2 9.4-22.9 9.4z"/><path d="M214.4 242.3c-12.5 0-22.7-4.1-22.7-9.3 0-5.1 10.2-9.3 22.7-9.3 12.6 0 22.8 4.2 22.8 9.3 0 5.2-10.2 9.3-22.8 9.3z"/></g><path fill="#a46a0a" d="M214.4 242.3c-12.5 0-22.6-4.2-22.6-9.3s10.1-9.3 22.6-9.3c12.6 0 22.7 4.2 22.7 9.3s-10.1 9.3-22.7 9.3z"/><path fill="#a56b0b" d="M214.4 242.3c-12.4 0-22.6-4.2-22.6-9.3s10.2-9.2 22.6-9.2c12.5 0 22.7 4.1 22.7 9.2s-10.2 9.3-22.7 9.3z"/><g fill="#a56c0b"><path d="M214.4 242.2c-12.4 0-22.5-4.1-22.5-9.2s10.1-9.2 22.5-9.2c12.5 0 22.6 4.1 22.6 9.2s-10.1 9.2-22.6 9.2z"/><path d="M214.4 242.2c-12.4 0-22.4-4.1-22.4-9.2 0-5 10-9.2 22.4-9.2 12.5 0 22.5 4.2 22.5 9.2 0 5.1-10 9.2-22.5 9.2z"/></g><path fill="#a66d0b" d="M214.4 242.2c-12.3 0-22.3-4.1-22.3-9.2 0-5 10-9.1 22.3-9.1 12.4 0 22.4 4.1 22.4 9.1 0 5.1-10 9.2-22.4 9.2z"/><path fill="#a66e0b" d="M214.4 242.1c-12.3 0-22.3-4-22.3-9.1 0-5 10-9.1 22.3-9.1 12.4 0 22.4 4.1 22.4 9.1 0 5.1-10 9.1-22.4 9.1z"/><g fill="#a76f0b"><path d="M214.4 242.1c-12.2 0-22.2-4.1-22.2-9.1s10-9.1 22.2-9.1c12.3 0 22.3 4.1 22.3 9.1s-10 9.1-22.3 9.1z"/><path d="M214.4 242.1c-12.2 0-22.1-4.1-22.1-9.1s9.9-9 22.1-9c12.3 0 22.2 4 22.2 9s-9.9 9.1-22.2 9.1z"/></g><path fill="#a7700b" d="M214.4 242c-12.1 0-22-4-22-9s9.9-9 22-9c12.2 0 22.1 4 22.1 9s-9.9 9-22.1 9z"/><path fill="#a8710c" d="M214.4 242c-12.1 0-21.9-4-21.9-9 0-4.9 9.8-9 21.9-9 12.2 0 22 4.1 22 9 0 5-9.8 9-22 9z"/><g fill="#a8720c"><path d="M214.4 242c-12 0-21.9-4-21.9-9 0-4.9 9.9-8.9 21.9-8.9 12.1 0 22 4 22 8.9 0 5-9.9 9-22 9z"/><path d="M214.4 241.9c-12 0-21.8-3.9-21.8-8.9 0-4.9 9.8-8.9 21.8-8.9 12.1 0 21.9 4 21.9 8.9 0 5-9.8 8.9-21.9 8.9z"/></g><path fill="#a9730c" d="M214.4 241.9c-12 0-21.7-4-21.7-8.9s9.7-8.9 21.7-8.9c12.1 0 21.8 4 21.8 8.9s-9.7 8.9-21.8 8.9z"/><path fill="#a9740c" d="M214.4 241.9c-11.9 0-21.6-4-21.6-8.9s9.7-8.8 21.6-8.8c12 0 21.7 3.9 21.7 8.8s-9.7 8.9-21.7 8.9z"/><path fill="#a9750c" d="M214.4 241.8c-11.9 0-21.5-3.9-21.5-8.8s9.6-8.8 21.5-8.8c12 0 21.6 3.9 21.6 8.8s-9.6 8.8-21.6 8.8z"/><g fill="#aa760c"><path d="M214.4 241.8c-11.8 0-21.5-3.9-21.5-8.8 0-4.8 9.7-8.8 21.5-8.8 11.9 0 21.6 4 21.6 8.8 0 4.9-9.7 8.8-21.6 8.8z"/><path d="M214.4 241.8c-11.8 0-21.4-3.9-21.4-8.8 0-4.8 9.6-8.7 21.4-8.7 11.9 0 21.5 3.9 21.5 8.7 0 4.9-9.6 8.8-21.5 8.8z"/></g><path fill="#ab770d" d="M214.4 241.8c-11.7 0-21.3-4-21.3-8.8s9.6-8.7 21.3-8.7c11.8 0 21.4 3.9 21.4 8.7s-9.6 8.8-21.4 8.8z"/><path fill="#ab780d" d="M214.4 241.7c-11.7 0-21.2-3.9-21.2-8.7s9.5-8.7 21.2-8.7c11.8 0 21.3 3.9 21.3 8.7s-9.5 8.7-21.3 8.7z"/><path fill="#ab790d" d="M214.4 241.7c-11.7 0-21.1-3.9-21.1-8.7s9.4-8.6 21.1-8.6c11.8 0 21.2 3.8 21.2 8.6s-9.4 8.7-21.2 8.7z"/><path fill="#ac790d" d="M214.4 241.7c-11.6 0-21.1-3.9-21.1-8.7 0-4.7 9.5-8.6 21.1-8.6 11.7 0 21.2 3.9 21.2 8.6 0 4.8-9.5 8.7-21.2 8.7z"/><path fill="#ac7a0d" d="M214.4 241.6c-11.6 0-21-3.8-21-8.6 0-4.7 9.4-8.6 21-8.6 11.7 0 21.1 3.9 21.1 8.6 0 4.8-9.4 8.6-21.1 8.6z"/><path fill="#ac7b0d" d="M214.4 241.6c-11.5 0-20.9-3.8-20.9-8.6 0-4.7 9.4-8.5 20.9-8.5 11.6 0 21 3.8 21 8.5 0 4.8-9.4 8.6-21 8.6z"/><path fill="#ad7c0d" d="M214.4 241.6c-11.5 0-20.8-3.9-20.8-8.6s9.3-8.5 20.8-8.5c11.6 0 20.9 3.8 20.9 8.5s-9.3 8.6-20.9 8.6z"/><path fill="#ad7d0d" d="M214.4 241.5c-11.4 0-20.7-3.8-20.7-8.5s9.3-8.5 20.7-8.5c11.5 0 20.8 3.8 20.8 8.5s-9.3 8.5-20.8 8.5z"/><path fill="#ad7d0e" d="M214.4 241.5c-11.4 0-20.7-3.8-20.7-8.5s9.3-8.4 20.7-8.4c11.5 0 20.8 3.7 20.8 8.4s-9.3 8.5-20.8 8.5z"/><path fill="#ae7e0e" d="M214.4 241.5c-11.3 0-20.6-3.8-20.6-8.5 0-4.6 9.3-8.4 20.6-8.4 11.4 0 20.7 3.8 20.7 8.4 0 4.7-9.3 8.5-20.7 8.5z"/><path fill="#ae7f0e" d="M214.4 241.4c-11.3 0-20.5-3.7-20.5-8.4 0-4.6 9.2-8.4 20.5-8.4 11.4 0 20.6 3.8 20.6 8.4 0 4.7-9.2 8.4-20.6 8.4z"/><path fill="#ae800e" d="M214.4 241.4c-11.3 0-20.4-3.8-20.4-8.4s9.1-8.4 20.4-8.4c11.4 0 20.5 3.8 20.5 8.4s-9.1 8.4-20.5 8.4z"/><path fill="#af800e" d="M214.4 241.4c-11.2 0-20.3-3.8-20.3-8.4s9.1-8.3 20.3-8.3c11.3 0 20.4 3.7 20.4 8.3s-9.1 8.4-20.4 8.4z"/><path fill="#af810e" d="M214.4 241.3c-11.2 0-20.3-3.7-20.3-8.3s9.1-8.3 20.3-8.3c11.3 0 20.4 3.7 20.4 8.3s-9.1 8.3-20.4 8.3z"/><path fill="#af820e" d="M214.4 241.3c-11.1 0-20.2-3.7-20.2-8.3 0-4.5 9.1-8.3 20.2-8.3 11.2 0 20.3 3.8 20.3 8.3 0 4.6-9.1 8.3-20.3 8.3z"/><g fill="#b0830e"><path d="M214.4 241.3c-11.1 0-20.1-3.7-20.1-8.3 0-4.5 9-8.2 20.1-8.2 11.2 0 20.2 3.7 20.2 8.2 0 4.6-9 8.3-20.2 8.3z"/><path d="M214.4 241.2c-11 0-20-3.6-20-8.2 0-4.5 9-8.2 20-8.2 11.1 0 20.1 3.7 20.1 8.2 0 4.6-9 8.2-20.1 8.2z"/></g><path fill="#b1840e" d="M214.4 241.2c-11 0-20-3.7-20-8.2s9-8.2 20-8.2c11.1 0 20.1 3.7 20.1 8.2s-9 8.2-20.1 8.2z"/><path fill="#b1850e" d="M214.4 241.2c-11 0-19.9-3.7-19.9-8.2s8.9-8.1 19.9-8.1c11.1 0 20 3.6 20 8.1s-8.9 8.2-20 8.2z"/><path fill="#b1860e" d="M214.4 241.1c-10.9 0-19.8-3.6-19.8-8.1s8.9-8.1 19.8-8.1c11 0 19.9 3.6 19.9 8.1s-8.9 8.1-19.9 8.1z"/><g fill="#b2870e"><path d="M214.4 241.1c-10.9 0-19.7-3.6-19.7-8.1 0-4.4 8.8-8.1 19.7-8.1 11 0 19.8 3.7 19.8 8.1 0 4.5-8.8 8.1-19.8 8.1z"/><path d="M214.4 241.1c-10.8 0-19.6-3.6-19.6-8.1 0-4.4 8.8-8 19.6-8 10.9 0 19.7 3.6 19.7 8 0 4.5-8.8 8.1-19.7 8.1z"/></g><path fill="#b2880e" d="M214.4 241c-10.8 0-19.6-3.5-19.6-8 0-4.4 8.8-8 19.6-8 10.9 0 19.7 3.6 19.7 8 0 4.5-8.8 8-19.7 8z"/><path fill="#b3890e" d="M214.4 241c-10.7 0-19.5-3.6-19.5-8s8.8-8 19.5-8c10.8 0 19.6 3.6 19.6 8s-8.8 8-19.6 8z"/><path fill="#b38a0e" d="M214.4 241c-10.7 0-19.4-3.6-19.4-8s8.7-7.9 19.4-7.9c10.8 0 19.5 3.5 19.5 7.9s-8.7 8-19.5 8z"/><path fill="#b38b0e" d="M214.4 240.9c-10.6 0-19.3-3.5-19.3-7.9s8.7-7.9 19.3-7.9c10.7 0 19.4 3.5 19.4 7.9s-8.7 7.9-19.4 7.9z"/><path fill="#b48b0e" d="M214.4 240.9c-10.6 0-19.2-3.5-19.2-7.9 0-4.3 8.6-7.9 19.2-7.9 10.7 0 19.3 3.6 19.3 7.9 0 4.4-8.6 7.9-19.3 7.9z"/><path fill="#b48c0e" d="M214.4 240.9c-10.6 0-19.2-3.5-19.2-7.9 0-4.3 8.6-7.8 19.2-7.8 10.7 0 19.3 3.5 19.3 7.8 0 4.4-8.6 7.9-19.3 7.9z"/><path fill="#b48d0e" d="M214.4 240.8c-10.5 0-19.1-3.5-19.1-7.8s8.6-7.8 19.1-7.8c10.6 0 19.2 3.5 19.2 7.8s-8.6 7.8-19.2 7.8z"/><path fill="#b58e0f" d="M214.4 240.8c-10.5 0-19-3.5-19-7.8s8.5-7.8 19-7.8c10.6 0 19.1 3.5 19.1 7.8s-8.5 7.8-19.1 7.8z"/><g fill="#b58f0f"><path d="M214.4 240.8c-10.4 0-18.9-3.5-18.9-7.8s8.5-7.7 18.9-7.7c10.5 0 19 3.4 19 7.7s-8.5 7.8-19 7.8z"/><path d="M214.4 240.7c-10.4 0-18.8-3.4-18.8-7.7 0-4.2 8.4-7.7 18.8-7.7 10.5 0 18.9 3.5 18.9 7.7 0 4.3-8.4 7.7-18.9 7.7z"/></g><path fill="#b6900f" d="M214.4 240.7c-10.3 0-18.8-3.4-18.8-7.7 0-4.2 8.5-7.7 18.8-7.7 10.4 0 18.9 3.5 18.9 7.7 0 4.3-8.5 7.7-18.9 7.7z"/><path fill="#b6910f" d="M214.4 240.7c-10.3 0-18.7-3.4-18.7-7.7 0-4.2 8.4-7.6 18.7-7.6 10.4 0 18.8 3.4 18.8 7.6 0 4.3-8.4 7.7-18.8 7.7z"/><path fill="#b7920f" d="M214.4 240.7c-10.3 0-18.6-3.5-18.6-7.7s8.3-7.6 18.6-7.6c10.4 0 18.7 3.4 18.7 7.6s-8.3 7.7-18.7 7.7z"/><g fill="#b7930f"><path d="M214.4 240.6c-10.2 0-18.5-3.4-18.5-7.6s8.3-7.6 18.5-7.6c10.3 0 18.6 3.4 18.6 7.6s-8.3 7.6-18.6 7.6z"/><path d="M214.4 240.6c-10.2 0-18.4-3.4-18.4-7.6s8.2-7.5 18.4-7.5c10.3 0 18.5 3.3 18.5 7.5s-8.2 7.6-18.5 7.6z"/></g><g fill="#b8940f"><path d="M214.4 240.6c-10.1 0-18.4-3.4-18.4-7.6 0-4.1 8.3-7.5 18.4-7.5 10.2 0 18.5 3.4 18.5 7.5 0 4.2-8.3 7.6-18.5 7.6z"/><path d="M214.4 240.5c-10.1 0-18.3-3.3-18.3-7.5 0-4.1 8.2-7.5 18.3-7.5 10.2 0 18.4 3.4 18.4 7.5 0 4.2-8.2 7.5-18.4 7.5z"/></g><path fill="#b89510" d="M214.4 240.5c-10 0-18.2-3.4-18.2-7.5s8.2-7.4 18.2-7.4c10.1 0 18.3 3.3 18.3 7.4s-8.2 7.5-18.3 7.5z"/><path fill="#b99511" d="M214.4 240.4c-10 0-18.1-3.3-18.1-7.4s8.1-7.4 18.1-7.4c10.1 0 18.2 3.3 18.2 7.4s-8.1 7.4-18.2 7.4z"/><path fill="#b99612" d="M214.4 240.4c-9.9 0-18-3.3-18-7.4 0-4 8.1-7.3 18-7.3 10 0 18.1 3.3 18.1 7.3 0 4.1-8.1 7.4-18.1 7.4z"/><path fill="#ba9713" d="M214.4 240.3c-9.8 0-17.9-3.2-17.9-7.3 0-4 8.1-7.3 17.9-7.3 9.9 0 18 3.3 18 7.3 0 4.1-8.1 7.3-18 7.3z"/><path fill="#ba9714" d="M214.4 240.3c-9.8 0-17.7-3.3-17.7-7.3s7.9-7.3 17.7-7.3c9.9 0 17.8 3.3 17.8 7.3s-7.9 7.3-17.8 7.3z"/><path fill="#bb9815" d="M214.4 240.3c-9.7 0-17.6-3.3-17.6-7.3s7.9-7.2 17.6-7.2c9.8 0 17.7 3.2 17.7 7.2s-7.9 7.3-17.7 7.3z"/><path fill="#bc9816" d="M214.4 240.2c-9.7 0-17.5-3.2-17.5-7.2 0-3.9 7.8-7.2 17.5-7.2 9.8 0 17.6 3.3 17.6 7.2 0 4-7.8 7.2-17.6 7.2z"/><path fill="#bc9917" d="M214.4 240.2c-9.6 0-17.4-3.2-17.4-7.2 0-3.9 7.8-7.1 17.4-7.1 9.7 0 17.5 3.2 17.5 7.1 0 4-7.8 7.2-17.5 7.2z"/><path fill="#bd9918" d="M214.4 240.1c-9.5 0-17.3-3.2-17.3-7.1s7.8-7.1 17.3-7.1c9.6 0 17.4 3.2 17.4 7.1s-7.8 7.1-17.4 7.1z"/><path fill="#bd9a19" d="M214.4 240.1c-9.5 0-17.2-3.2-17.2-7.1s7.7-7 17.2-7c9.6 0 17.3 3.1 17.3 7s-7.7 7.1-17.3 7.1z"/><path fill="#be9a1b" d="M214.4 240c-9.4 0-17.1-3.1-17.1-7 0-3.8 7.7-7 17.1-7 9.5 0 17.2 3.2 17.2 7 0 3.9-7.7 7-17.2 7z"/><path fill="#be9b1c" d="M214.4 240c-9.4 0-17-3.1-17-7 0-3.8 7.6-6.9 17-6.9 9.5 0 17.1 3.1 17.1 6.9 0 3.9-7.6 7-17.1 7z"/><path fill="#bf9c1d" d="M214.4 239.9c-9.3 0-16.9-3.1-16.9-6.9s7.6-6.9 16.9-6.9c9.4 0 17 3.1 17 6.9s-7.6 6.9-17 6.9z"/><path fill="#c09c1e" d="M214.4 239.9c-9.2 0-16.8-3.1-16.8-6.9s7.6-6.9 16.8-6.9c9.3 0 16.9 3.1 16.9 6.9s-7.6 6.9-16.9 6.9z"/><path fill="#c09d1f" d="M214.4 239.9c-9.2 0-16.7-3.1-16.7-6.9s7.5-6.8 16.7-6.8c9.3 0 16.8 3 16.8 6.8s-7.5 6.9-16.8 6.9z"/><path fill="#c19d20" d="M214.4 239.8c-9.1 0-16.6-3-16.6-6.8 0-3.7 7.5-6.8 16.6-6.8 9.2 0 16.7 3.1 16.7 6.8 0 3.8-7.5 6.8-16.7 6.8z"/><path fill="#c19e21" d="M214.4 239.8c-9.1 0-16.4-3.1-16.4-6.8s7.3-6.7 16.4-6.7c9.2 0 16.5 3 16.5 6.7s-7.3 6.8-16.5 6.8z"/><path fill="#c29e23" d="M214.4 239.7c-9 0-16.3-3-16.3-6.7s7.3-6.7 16.3-6.7c9.1 0 16.4 3 16.4 6.7s-7.3 6.7-16.4 6.7z"/><path fill="#c39f24" d="M214.4 239.7c-8.9 0-16.2-3-16.2-6.7s7.3-6.6 16.2-6.6c9 0 16.3 2.9 16.3 6.6s-7.3 6.7-16.3 6.7z"/><path fill="#c3a025" d="M214.4 239.6c-8.9 0-16.1-2.9-16.1-6.6 0-3.6 7.2-6.6 16.1-6.6 9 0 16.2 3 16.2 6.6 0 3.7-7.2 6.6-16.2 6.6z"/><path fill="#c4a026" d="M214.4 239.6c-8.8 0-16-3-16-6.6s7.2-6.5 16-6.5c8.9 0 16.1 2.9 16.1 6.5s-7.2 6.6-16.1 6.6z"/><path fill="#c4a127" d="M214.4 239.5c-8.8 0-15.9-2.9-15.9-6.5s7.1-6.5 15.9-6.5c8.9 0 16 2.9 16 6.5s-7.1 6.5-16 6.5z"/><path fill="#c5a128" d="M214.4 239.5c-8.7 0-15.8-2.9-15.8-6.5s7.1-6.5 15.8-6.5c8.8 0 15.9 2.9 15.9 6.5s-7.1 6.5-15.9 6.5z"/><path fill="#c6a22a" d="M214.4 239.5c-8.6 0-15.7-2.9-15.7-6.5 0-3.5 7.1-6.4 15.7-6.4 8.7 0 15.8 2.9 15.8 6.4 0 3.6-7.1 6.5-15.8 6.5z"/><path fill="#c6a22b" d="M214.4 239.4c-8.6 0-15.6-2.8-15.6-6.4 0-3.5 7-6.4 15.6-6.4 8.7 0 15.7 2.9 15.7 6.4 0 3.6-7 6.4-15.7 6.4z"/><path fill="#c7a32c" d="M214.4 239.4c-8.5 0-15.5-2.9-15.5-6.4s7-6.3 15.5-6.3c8.6 0 15.6 2.8 15.6 6.3s-7 6.4-15.6 6.4z"/><path fill="#c7a42d" d="M214.4 239.3c-8.5 0-15.4-2.8-15.4-6.3s6.9-6.3 15.4-6.3c8.6 0 15.5 2.8 15.5 6.3s-6.9 6.3-15.5 6.3z"/><path fill="#c8a42e" d="M214.4 239.3c-8.4 0-15.2-2.8-15.2-6.3 0-3.4 6.8-6.2 15.2-6.2 8.5 0 15.3 2.8 15.3 6.2 0 3.5-6.8 6.3-15.3 6.3z"/><path fill="#c9a52f" d="M214.4 239.2c-8.3 0-15.1-2.7-15.1-6.2 0-3.4 6.8-6.2 15.1-6.2 8.4 0 15.2 2.8 15.2 6.2 0 3.5-6.8 6.2-15.2 6.2z"/><path fill="#c9a530" d="M214.4 239.2c-8.3 0-15-2.8-15-6.2s6.7-6.1 15-6.1c8.4 0 15.1 2.7 15.1 6.1s-6.7 6.2-15.1 6.2z"/><path fill="#caa631" d="M214.4 239.1c-8.2 0-14.9-2.7-14.9-6.1s6.7-6.1 14.9-6.1c8.3 0 15 2.7 15 6.1s-6.7 6.1-15 6.1z"/><path fill="#caa732" d="M214.4 239.1c-8.2 0-14.8-2.7-14.8-6.1 0-3.3 6.6-6.1 14.8-6.1 8.3 0 14.9 2.8 14.9 6.1 0 3.4-6.6 6.1-14.9 6.1z"/><path fill="#cba733" d="M214.4 239.1c-8.1 0-14.7-2.7-14.7-6.1 0-3.3 6.6-6 14.7-6 8.2 0 14.8 2.7 14.8 6 0 3.4-6.6 6.1-14.8 6.1z"/><path fill="#cba834" d="M214.4 239c-8 0-14.6-2.7-14.6-6s6.6-6 14.6-6c8.1 0 14.7 2.7 14.7 6s-6.6 6-14.7 6z"/><path fill="#cca835" d="M214.4 239c-8 0-14.5-2.7-14.5-6s6.5-5.9 14.5-5.9c8.1 0 14.6 2.6 14.6 5.9s-6.5 6-14.6 6z"/><path fill="#cda936" d="M214.4 238.9c-7.9 0-14.4-2.6-14.4-5.9 0-3.2 6.5-5.9 14.4-5.9 8 0 14.5 2.7 14.5 5.9 0 3.3-6.5 5.9-14.5 5.9z"/><path fill="#cdaa37" d="M214.4 238.9c-7.9 0-14.3-2.6-14.3-5.9 0-3.2 6.4-5.8 14.3-5.8 8 0 14.4 2.6 14.4 5.8 0 3.3-6.4 5.9-14.4 5.9z"/><path fill="#ceaa38" d="M214.4 238.8c-7.8 0-14.2-2.6-14.2-5.8s6.4-5.8 14.2-5.8c7.9 0 14.3 2.6 14.3 5.8s-6.4 5.8-14.3 5.8z"/><path fill="#ceab39" d="M214.4 238.8c-7.7 0-14.1-2.6-14.1-5.8s6.4-5.7 14.1-5.7c7.8 0 14.2 2.5 14.2 5.7s-6.4 5.8-14.2 5.8z"/><path fill="#cfab3a" d="M214.4 238.7c-7.7 0-13.9-2.5-13.9-5.7 0-3.1 6.2-5.7 13.9-5.7 7.8 0 14 2.6 14 5.7 0 3.2-6.2 5.7-14 5.7z"/><path fill="#cfac3b" d="M214.4 238.7c-7.6 0-13.8-2.5-13.8-5.7 0-3.1 6.2-5.7 13.8-5.7 7.7 0 13.9 2.6 13.9 5.7 0 3.2-6.2 5.7-13.9 5.7z"/><path fill="#d0ad3c" d="M214.4 238.7c-7.6 0-13.7-2.6-13.7-5.7s6.1-5.6 13.7-5.6c7.7 0 13.8 2.5 13.8 5.6s-6.1 5.7-13.8 5.7z"/><path fill="#d1ad3e" d="M214.4 238.6c-7.5 0-13.6-2.5-13.6-5.6s6.1-5.6 13.6-5.6c7.6 0 13.7 2.5 13.7 5.6s-6.1 5.6-13.7 5.6z"/><path fill="#d1ae3f" d="M214.4 238.6c-7.4 0-13.5-2.5-13.5-5.6 0-3 6.1-5.5 13.5-5.5 7.5 0 13.6 2.5 13.6 5.5 0 3.1-6.1 5.6-13.6 5.6z"/><path fill="#d2ae40" d="M214.4 238.5c-7.4 0-13.4-2.4-13.4-5.5 0-3 6-5.5 13.4-5.5 7.5 0 13.5 2.5 13.5 5.5 0 3.1-6 5.5-13.5 5.5z"/><path fill="#d2af41" d="M214.4 238.5c-7.3 0-13.3-2.5-13.3-5.5s6-5.4 13.3-5.4c7.4 0 13.4 2.4 13.4 5.4s-6 5.5-13.4 5.5z"/><path fill="#d3b042" d="M214.4 238.4c-7.3 0-13.2-2.4-13.2-5.4s5.9-5.4 13.2-5.4c7.4 0 13.3 2.4 13.3 5.4s-5.9 5.4-13.3 5.4z"/><path fill="#d3b043" d="M214.4 238.4c-7.2 0-13.1-2.4-13.1-5.4 0-2.9 5.9-5.3 13.1-5.3 7.3 0 13.2 2.4 13.2 5.3 0 3-5.9 5.4-13.2 5.4z"/><path fill="#d4b144" d="M214.4 238.3c-7.1 0-13-2.3-13-5.3 0-2.9 5.9-5.3 13-5.3 7.2 0 13.1 2.4 13.1 5.3 0 3-5.9 5.3-13.1 5.3z"/><path fill="#d5b145" d="M214.4 238.3c-7.1 0-12.9-2.4-12.9-5.3s5.8-5.3 12.9-5.3c7.2 0 13 2.4 13 5.3s-5.8 5.3-13 5.3z"/><path fill="#d5b246" d="M214.4 238.3c-7 0-12.8-2.4-12.8-5.3s5.8-5.2 12.8-5.2c7.1 0 12.9 2.3 12.9 5.2s-5.8 5.3-12.9 5.3z"/><path fill="#d6b347" d="M214.4 238.2c-7 0-12.6-2.3-12.6-5.2 0-2.8 5.6-5.2 12.6-5.2 7.1 0 12.7 2.4 12.7 5.2 0 2.9-5.6 5.2-12.7 5.2z"/><path fill="#d6b349" d="M214.4 238.2c-6.9 0-12.5-2.3-12.5-5.2 0-2.8 5.6-5.1 12.5-5.1 7 0 12.6 2.3 12.6 5.1 0 2.9-5.6 5.2-12.6 5.2z"/><path fill="#d7b44a" d="M214.4 238.1c-6.8 0-12.4-2.3-12.4-5.1s5.6-5.1 12.4-5.1c6.9 0 12.5 2.3 12.5 5.1s-5.6 5.1-12.5 5.1z"/><path fill="#d8b44b" d="M214.4 238.1c-6.8 0-12.3-2.3-12.3-5.1s5.5-5 12.3-5c6.9 0 12.4 2.2 12.4 5s-5.5 5.1-12.4 5.1z"/><path fill="#d8b54c" d="M214.4 238c-6.7 0-12.2-2.2-12.2-5 0-2.7 5.5-5 12.2-5 6.8 0 12.3 2.3 12.3 5 0 2.8-5.5 5-12.3 5z"/><path fill="#d9b64d" d="M214.4 238c-6.7 0-12.1-2.2-12.1-5 0-2.7 5.4-4.9 12.1-4.9 6.8 0 12.2 2.2 12.2 4.9 0 2.8-5.4 5-12.2 5z"/><path fill="#d9b64e" d="M214.4 237.9c-6.6 0-12-2.2-12-4.9s5.4-4.9 12-4.9c6.7 0 12.1 2.2 12.1 4.9s-5.4 4.9-12.1 4.9z"/><path fill="#dab74f" d="M214.4 237.9c-6.5 0-11.9-2.2-11.9-4.9s5.4-4.9 11.9-4.9c6.6 0 12 2.2 12 4.9s-5.4 4.9-12 4.9z"/><path fill="#dbb850" d="M214.4 237.9c-6.5 0-11.8-2.2-11.8-4.9 0-2.6 5.3-4.8 11.8-4.8 6.6 0 11.9 2.2 11.9 4.8 0 2.7-5.3 4.9-11.9 4.9z"/><path fill="#dbb851" d="M214.4 237.8c-6.4 0-11.7-2.1-11.7-4.8 0-2.6 5.3-4.8 11.7-4.8 6.5 0 11.8 2.2 11.8 4.8 0 2.7-5.3 4.8-11.8 4.8z"/><path fill="#dcb952" d="M214.4 237.8c-6.4 0-11.6-2.2-11.6-4.8s5.2-4.7 11.6-4.7c6.5 0 11.7 2.1 11.7 4.7s-5.2 4.8-11.7 4.8z"/><path fill="#dcb953" d="M214.4 237.7c-6.3 0-11.4-2.1-11.4-4.7s5.1-4.7 11.4-4.7c6.4 0 11.5 2.1 11.5 4.7s-5.1 4.7-11.5 4.7z"/><path fill="#ddba54" d="M214.4 237.7c-6.2 0-11.3-2.1-11.3-4.7 0-2.5 5.1-4.6 11.3-4.6 6.3 0 11.4 2.1 11.4 4.6 0 2.6-5.1 4.7-11.4 4.7z"/><path fill="#debb55" d="M214.4 237.6c-6.2 0-11.2-2-11.2-4.6 0-2.5 5-4.6 11.2-4.6 6.3 0 11.3 2.1 11.3 4.6 0 2.6-5 4.6-11.3 4.6z"/><path fill="#debb56" d="M214.4 237.6c-6.1 0-11.1-2.1-11.1-4.6s5-4.5 11.1-4.5c6.2 0 11.2 2 11.2 4.5s-5 4.6-11.2 4.6z"/><path fill="#dfbc57" d="M214.4 237.5c-6.1 0-11-2-11-4.5s4.9-4.5 11-4.5c6.2 0 11.1 2 11.1 4.5s-4.9 4.5-11.1 4.5z"/><path fill="#dfbd58" d="M214.4 237.5c-6 0-10.9-2-10.9-4.5s4.9-4.5 10.9-4.5c6.1 0 11 2 11 4.5s-4.9 4.5-11 4.5z"/><path fill="#e0bd59" d="M214.4 237.5c-5.9 0-10.8-2-10.8-4.5 0-2.4 4.9-4.4 10.8-4.4 6 0 10.9 2 10.9 4.4 0 2.5-4.9 4.5-10.9 4.5z"/><path fill="#e1be5a" d="M214.4 237.4c-5.9 0-10.7-2-10.7-4.4s4.8-4.4 10.7-4.4c6 0 10.8 2 10.8 4.4s-4.8 4.4-10.8 4.4z"/><path fill="#e1bf5b" d="M214.4 237.4c-5.8 0-10.6-2-10.6-4.4s4.8-4.3 10.6-4.3c5.9 0 10.7 1.9 10.7 4.3s-4.8 4.4-10.7 4.4z"/><path fill="#e2bf5c" d="M214.4 237.3c-5.8 0-10.5-1.9-10.5-4.3s4.7-4.3 10.5-4.3c5.9 0 10.6 1.9 10.6 4.3s-4.7 4.3-10.6 4.3z"/><path fill="#e3c05d" d="M214.4 237.3c-5.7 0-10.4-1.9-10.4-4.3 0-2.3 4.7-4.2 10.4-4.2 5.8 0 10.5 1.9 10.5 4.2 0 2.4-4.7 4.3-10.5 4.3z"/><path fill="#e3c15e" d="M214.4 237.2c-5.6 0-10.3-1.9-10.3-4.2s4.7-4.2 10.3-4.2c5.7 0 10.4 1.9 10.4 4.2s-4.7 4.2-10.4 4.2z"/><path fill="#e4c15f" d="M214.4 237.2c-5.6 0-10.1-1.9-10.1-4.2s4.5-4.1 10.1-4.1c5.7 0 10.2 1.8 10.2 4.1s-4.5 4.2-10.2 4.2z"/><path fill="#e4c260" d="M214.4 237.1c-5.5 0-10-1.8-10-4.1s4.5-4.1 10-4.1c5.6 0 10.1 1.8 10.1 4.1s-4.5 4.1-10.1 4.1z"/><path fill="#e5c361" d="M214.4 237.1c-5.5 0-9.9-1.8-9.9-4.1 0-2.2 4.4-4.1 9.9-4.1 5.6 0 10 1.9 10 4.1 0 2.3-4.4 4.1-10 4.1z"/><path fill="#e6c363" d="M214.4 237.1c-5.4 0-9.8-1.8-9.8-4.1 0-2.2 4.4-4 9.8-4 5.5 0 9.9 1.8 9.9 4 0 2.3-4.4 4.1-9.9 4.1z"/><path fill="#e6c464" d="M214.4 237c-5.3 0-9.7-1.8-9.7-4s4.4-4 9.7-4c5.4 0 9.8 1.8 9.8 4s-4.4 4-9.8 4z"/><path fill="#e7c565" d="M214.4 237c-5.3 0-9.6-1.8-9.6-4s4.3-3.9 9.6-3.9c5.4 0 9.7 1.7 9.7 3.9s-4.3 4-9.7 4z"/><path fill="#e8c566" d="M214.4 236.9c-5.2 0-9.5-1.7-9.5-3.9 0-2.1 4.3-3.9 9.5-3.9 5.3 0 9.6 1.8 9.6 3.9 0 2.2-4.3 3.9-9.6 3.9z"/><path fill="#e8c667" d="M214.4 236.9c-5.2 0-9.4-1.7-9.4-3.9 0-2.1 4.2-3.8 9.4-3.8 5.3 0 9.5 1.7 9.5 3.8 0 2.2-4.2 3.9-9.5 3.9z"/><path fill="#e9c768" d="M214.4 236.8c-5.1 0-9.3-1.7-9.3-3.8s4.2-3.8 9.3-3.8c5.2 0 9.4 1.7 9.4 3.8s-4.2 3.8-9.4 3.8z"/><path fill="#eac769" d="M214.4 236.8c-5 0-9.2-1.7-9.2-3.8s4.2-3.7 9.2-3.7c5.1 0 9.3 1.6 9.3 3.7s-4.2 3.8-9.3 3.8z"/><path fill="#eac86a" d="M214.4 236.7c-5 0-9.1-1.6-9.1-3.7 0-2 4.1-3.7 9.1-3.7 5.1 0 9.2 1.7 9.2 3.7 0 2.1-4.1 3.7-9.2 3.7z"/><path fill="#ebc96b" d="M214.4 236.7c-4.9 0-9-1.6-9-3.7 0-2 4.1-3.7 9-3.7 5 0 9.1 1.7 9.1 3.7 0 2.1-4.1 3.7-9.1 3.7z"/><path fill="#ecca6c" d="M214.4 236.7c-4.9 0-8.8-1.7-8.8-3.7s3.9-3.6 8.8-3.6c5 0 8.9 1.6 8.9 3.6s-3.9 3.7-8.9 3.7z"/><path fill="#ecca6d" d="M214.4 236.6c-4.8 0-8.7-1.6-8.7-3.6s3.9-3.6 8.7-3.6c4.9 0 8.8 1.6 8.8 3.6s-3.9 3.6-8.8 3.6z"/><path fill="#edcb6e" d="M214.4 236.6c-4.7 0-8.6-1.6-8.6-3.6 0-1.9 3.9-3.5 8.6-3.5 4.8 0 8.7 1.6 8.7 3.5 0 2-3.9 3.6-8.7 3.6z"/><path fill="#eecc6f" d="M214.4 236.5c-4.7 0-8.5-1.5-8.5-3.5 0-1.9 3.8-3.5 8.5-3.5 4.8 0 8.6 1.6 8.6 3.5 0 2-3.8 3.5-8.6 3.5z"/><path fill="#eecc70" d="M214.4 236.5c-4.6 0-8.4-1.6-8.4-3.5s3.8-3.4 8.4-3.4c4.7 0 8.5 1.5 8.5 3.4s-3.8 3.5-8.5 3.5z"/><path fill="#efcd71" d="M214.4 236.4c-4.6 0-8.3-1.5-8.3-3.4s3.7-3.4 8.3-3.4c4.7 0 8.4 1.5 8.4 3.4s-3.7 3.4-8.4 3.4z"/><path fill="#f0ce72" d="M214.4 236.4c-4.5 0-8.2-1.5-8.2-3.4 0-1.8 3.7-3.3 8.2-3.3 4.6 0 8.3 1.5 8.3 3.3 0 1.9-3.7 3.4-8.3 3.4z"/><path fill="#f0cf73" d="M214.4 236.3c-4.4 0-8.1-1.4-8.1-3.3 0-1.8 3.7-3.3 8.1-3.3 4.5 0 8.2 1.5 8.2 3.3 0 1.9-3.7 3.3-8.2 3.3z"/><path fill="#f1cf74" d="M214.4 236.3c-4.4 0-8-1.5-8-3.3s3.6-3.3 8-3.3c4.5 0 8.1 1.5 8.1 3.3s-3.6 3.3-8.1 3.3z"/><path fill="#f1d075" d="M214.4 236.3c-4.3 0-7.9-1.5-7.9-3.3s3.6-3.2 7.9-3.2c4.4 0 8 1.4 8 3.2s-3.6 3.3-8 3.3z"/><path fill="#f2d176" d="M214.4 236.2c-4.3 0-7.8-1.4-7.8-3.2 0-1.7 3.5-3.2 7.8-3.2 4.4 0 7.9 1.5 7.9 3.2 0 1.8-3.5 3.2-7.9 3.2z"/><path fill="#f3d177" d="M214.4 236.2c-4.2 0-7.7-1.4-7.7-3.2 0-1.7 3.5-3.1 7.7-3.1 4.3 0 7.7 1.4 7.7 3.1 0 1.8-3.4 3.2-7.7 3.2z"/><path fill="#f3d278" d="M214.4 236.1c-4.1 0-7.5-1.4-7.5-3.1s3.4-3.1 7.5-3.1c4.2 0 7.6 1.4 7.6 3.1s-3.4 3.1-7.6 3.1z"/><path fill="#f4d379" d="M214.4 236.1c-4.1 0-7.4-1.4-7.4-3.1s3.3-3 7.4-3c4.2 0 7.5 1.3 7.5 3s-3.3 3.1-7.5 3.1z"/><path fill="#f5d37a" d="M214.4 236c-4 0-7.3-1.3-7.3-3 0-1.6 3.3-3 7.3-3 4.1 0 7.4 1.4 7.4 3 0 1.7-3.3 3-7.4 3z"/><path fill="#f5d47b" d="M214.4 236c-4 0-7.2-1.3-7.2-3 0-1.6 3.2-2.9 7.2-2.9 4.1 0 7.3 1.3 7.3 2.9 0 1.7-3.2 3-7.3 3z"/><path fill="#f6d57d" d="M214.4 235.9c-3.9 0-7.1-1.3-7.1-2.9s3.2-2.9 7.1-2.9c4 0 7.2 1.3 7.2 2.9s-3.2 2.9-7.2 2.9z"/><path fill="#f7d67e" d="M214.4 235.9c-3.8 0-7-1.3-7-2.9s3.2-2.9 7-2.9c3.9 0 7.1 1.3 7.1 2.9s-3.2 2.9-7.1 2.9z"/><path fill="#f7d67f" d="M214.4 235.9c-3.8 0-6.9-1.3-6.9-2.9 0-1.5 3.1-2.8 6.9-2.8 3.9 0 7 1.3 7 2.8 0 1.6-3.1 2.9-7 2.9z"/><path fill="#f8d780" d="M214.4 235.8c-3.7 0-6.8-1.2-6.8-2.8 0-1.5 3.1-2.8 6.8-2.8 3.8 0 6.9 1.3 6.9 2.8 0 1.6-3.1 2.8-6.9 2.8z"/><path fill="#f9d881" d="M214.4 235.8c-3.7 0-6.7-1.3-6.7-2.8s3-2.7 6.7-2.7c3.8 0 6.8 1.2 6.8 2.7s-3 2.8-6.8 2.8z"/><path fill="#f9d882" d="M214.4 235.7c-3.6 0-6.6-1.2-6.6-2.7s3-2.7 6.6-2.7c3.7 0 6.7 1.2 6.7 2.7s-3 2.7-6.7 2.7z"/><path fill="#fad983" d="M214.4 235.7c-3.5 0-6.5-1.2-6.5-2.7 0-1.4 3-2.6 6.5-2.6 3.6 0 6.6 1.2 6.6 2.6 0 1.5-3 2.7-6.6 2.7z"/><path fill="#fbda84" d="M214.4 235.6c-3.5 0-6.3-1.1-6.3-2.6 0-1.4 2.8-2.6 6.3-2.6 3.6 0 6.4 1.2 6.4 2.6 0 1.5-2.8 2.6-6.4 2.6z"/><path fill="#fbdb85" d="M214.4 235.6c-3.4 0-6.2-1.2-6.2-2.6s2.8-2.5 6.2-2.5c3.5 0 6.3 1.1 6.3 2.5s-2.8 2.6-6.3 2.6z"/><path fill="#fcdb86" d="M214.4 235.5c-3.4 0-6.1-1.1-6.1-2.5s2.7-2.5 6.1-2.5c3.5 0 6.2 1.1 6.2 2.5s-2.7 2.5-6.2 2.5z"/><path fill="#fddc87" d="M214.4 235.5c-3.3 0-6-1.1-6-2.5 0-1.3 2.7-2.5 6-2.5 3.4 0 6.1 1.2 6.1 2.5 0 1.4-2.7 2.5-6.1 2.5z"/><path fill="#fddd88" d="M214.4 235.5c-3.2 0-5.9-1.1-5.9-2.5 0-1.3 2.7-2.4 5.9-2.4 3.3 0 6 1.1 6 2.4 0 1.4-2.7 2.5-6 2.5z"/><path fill="#fede8a" d="M214.4 235.4c-3.2 0-5.8-1.1-5.8-2.4s2.6-2.4 5.8-2.4c3.3 0 5.9 1.1 5.9 2.4s-2.6 2.4-5.9 2.4z"/><path fill="url(#ai)" d="M260.3 324.4c-1.4-7.7-10.1-13.7-20.6-13.7h-51.3c-10.5 0-19.3 6-20.7 13.7z"/><path fill="url(#aj)" d="M190.3 310.7c-3 .1-9.1 7.9-9.7 13.7h14.7c.5-5.6 2.3-10.6 6.6-13.7z" style="mix-blend-mode:multiply"/><path fill="url(#ak)" d="M230.9 317.6c0 6.9-5.6 12.5-12.5 12.5s-12.6-5.6-12.6-12.5 5.7-12.5 12.6-12.5 12.5 5.6 12.5 12.5z" opacity=".81" style="mix-blend-mode:color-dodge"/><path fill="url(#al)" d="M227.3 310.7c0 10.7-.9 19.4-2.1 19.4s-2.2-8.7-2.2-19.4c0-10.6 1-19.3 2.2-19.3s2.1 8.7 2.1 19.3z" opacity=".81" style="mix-blend-mode:color-dodge"/><path fill="url(#am)" d="M225.2 312.9c-10.7 0-19.4-1-19.4-2.2s8.7-2.1 19.4-2.1c10.6 0 19.3.9 19.3 2.1s-8.7 2.2-19.3 2.2z" opacity=".81" style="mix-blend-mode:color-dodge"/><path fill="url(#an)" d="M226.5 309.4c6.4 6.5 11 12.2 10.3 13-.7.7-6.5-3.9-12.9-10.4-6.4-6.4-11.1-12.1-10.3-12.9.7-.7 6.5 3.9 12.9 10.3z" opacity=".81" style="mix-blend-mode:color-dodge"/><path fill="url(#ao)" d="M226.5 312c-6.4 6.5-12.2 11.1-12.9 10.4-.8-.8 3.9-6.5 10.3-13 6.4-6.4 12.2-11 12.9-10.3.7.8-3.9 6.5-10.3 12.9z" opacity=".81" style="mix-blend-mode:color-dodge"/><path fill="url(#ap)" d="M244.3 337.2H243c-.8 0-1.4-.6-1.4-1.4 0-1.7-1.4-3.2-3.1-3.2h-48.9c-1.8 0-3.2 1.5-3.2 3.2 0 .8-.6 1.4-1.3 1.4h-1.4c-.8 0-1.4.6-1.4 1.3v13.3c0 .7.6 1.3 1.4 1.3h1.4c.7 0 1.3.7 1.3 1.4 0 1.8 1.4 3.2 3.2 3.2h48.9c1.7 0 3.1-1.4 3.1-3.2 0-.7.6-1.4 1.4-1.4h1.3c.8 0 1.4-.6 1.4-1.3v-13.3c0-.7-.6-1.3-1.4-1.3z"/><path fill="url(#aq)" d="M141.6 262.7c-17.5-3.2-34.7-7.6-51.8-13.2q3.1 13.2 7 26.3-10.3 9.1-21.2 17.6c18.9 6.2 38.1 11.1 57.5 14.7q4.3-22.7 8.5-45.4z"/><path fill="url(#ar)" d="M133.1 308.1q-14.7-11.4-28.1-23.7 15.5 4.1 31.2 7-1.5 8.4-3.1 16.7z"/><path fill="url(#as)" d="M293.2 262.7c17.5-3.2 34.8-7.6 51.8-13.2q-3.1 13.2-7 26.3 10.3 9.1 21.3 17.6c-19 6.2-38.2 11.1-57.6 14.7q-4.2-22.7-8.5-45.4z"/><path fill="url(#at)" d="M116.6 239.8c66.1 17.3 135.5 17.4 201.5 0q5.9 22.3 11.7 44.6a441.81 441.81 0 0 1-224.9 0q5.9-22.3 11.7-44.6z"/><path fill="url(#au)" d="M301.7 308.1q14.8-11.4 28.1-23.7-15.5 4.1-31.2 7 1.6 8.4 3.1 16.7z"/></svg>
+            <svg class="text-overlay" viewBox="0 0 400 100" style="position: absolute; top: 60.5%; left: 50%; transform: translateX(-50%); width: 350px; height: 50px;">
+                <defs>
+                    <path id="ribbon-curve" d="M 20 25 Q 200 60 380 25" />
+                </defs>
+                <text class="winner-name-svg" font-weight="bold" font-size="24" text-anchor="middle">
+                    <textPath href="#ribbon-curve" startOffset="50%"></textPath>
+                </text>
+            </svg>
+            
+            <div class="winner-record-overlay"></div>
+        </div>`;
+        }
+
+        /**
+         * Get the status text for the tournament
+         */
+        function getTournamentStatus(tournamentData) {
+            const format = tournamentData.settings.format || 'double-elimination';
+            const bracketNames = getBracketNames();
+
+            if (format === 'round-robin') {
+                const totalMatches = tournamentData.completedMatches.length + tournamentData.currentMatches.length;
+                const completedMatches = tournamentData.completedMatches.length;
+                return `Round Robin:\n${completedMatches}/${totalMatches} Matches Complete`;
+            }
+
+            if (format === 'single-elimination') {
+                if (tournamentData.winner) {
+                    return 'Tournament Complete';
+                }
+
+                const remainingPlayers = tournamentData.winnersPlayers.length +
+                    tournamentData.currentMatches.length * 2;
+                const totalRounds = Math.ceil(Math.log2(tournamentData.initialPlayerCount));
+                const currentRound = totalRounds - Math.ceil(Math.log2(remainingPlayers)) + 1;
+
+                let roundName = `Round ${currentRound}`;
+                if (remainingPlayers === 2) {
+                    roundName = bracketNames.finals;
+                } else if (remainingPlayers === 4) {
+                    roundName = 'Semifinals';
+                } else if (remainingPlayers === 8) {
+                    roundName = 'Quarterfinals';
+                }
+
+                return `${bracketNames.singleElimination}:\n${roundName}`;
+            }
+
+            if (tournamentData.winner && !tournamentData.requireTrueFinal) {
+                return 'Tournament Complete';
+            }
+
+            if (tournamentData.bracketStage === 'final') {
+                if (tournamentData.requireTrueFinal && !tournamentData.trueFinalPlayed) {
+                    return `${bracketNames.finals}:\nMatch 1`;
+                } else if (tournamentData.requireTrueFinal && tournamentData.trueFinalPlayed) {
+                    return `${bracketNames.finals}:\nTrue Final`;
+                } else {
+                    return `${bracketNames.finals}`;
+                }
+            }
+
+            const customNames = CONFIG.tournamentData.settings?.customBracketNames || {};
+            const bracketName = tournamentData.bracketStage === 'winners' ?
+                bracketNames.winnersShort : bracketNames.losersShort;
+            const currentRound = tournamentData.bracketStage === 'winners' ?
+                tournamentData.winnersRound : tournamentData.losersRound;
+
+            const totalPlayers = tournamentData.bracketStage === 'winners' ?
+                tournamentData.initialPlayerCount :
+                Math.ceil(tournamentData.initialPlayerCount / 2);
+            const totalRounds = Math.ceil(Math.log2(totalPlayers));
+
+            let roundName;
+            if (totalRounds >= 4) {
+                if (currentRound <= totalRounds - 3) {
+                    const ordinals = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth'];
+                    roundName = `${ordinals[currentRound - 1]} Round`;
+                } else if (currentRound === totalRounds - 2) {
+                    roundName = 'Quarterfinals';
+                } else if (currentRound === totalRounds - 1) {
+                    roundName = 'Semifinals';
+                } else {
+                    roundName = `Finals`;
+                }
+            } else if (totalRounds === 3) {
+                if (currentRound === 1) {
+                    roundName = 'First Round';
+                } else if (currentRound === 2) {
+                    roundName = 'Semifinals';
+                } else {
+                    roundName = `Finals`;
+                }
+            } else if (totalRounds === 2) {
+                if (currentRound === 1) {
+                    roundName = 'Semifinals';
+                } else {
+                    roundName = `Finals`;
+                }
+            } else {
+                roundName = `Finals`;
+            }
+
+            return `${bracketName}:\n${roundName}`;
+        }
+
+        /**
+         * Updates the tournament display with current data
+         */
+        function updateTournamentDisplay(config) {
+            console.log('updateTournamentDisplay called with config:', config);
+
+            if (!config || !config.tournamentData) {
+                console.error('Missing config or tournamentData');
+                return;
+            }
+
+            const tournamentId = `tournament_${config.tournamentTitle.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            const container = document.getElementById(tournamentId) || document.querySelector('.tournamentOverlay');
+
+            if (!container) {
+                console.error(`No container found for tournament ${tournamentId}`);
+                return;
+            }
+
+            document.documentElement.style.setProperty('--primary', config.styles.accentColor);
+            document.documentElement.style.setProperty('--background', config.styles.backgroundColor);
+            document.documentElement.style.setProperty('--text', config.styles.textColor);
+            document.documentElement.style.setProperty('--player-card', config.styles.playerCardColor || '#222222');
+            document.documentElement.style.setProperty('--stats-card', config.styles.statsCardColor || '#1a1a1a');
+            document.documentElement.style.setProperty('--border', config.styles.borderColor || '#333333');
+            document.documentElement.style.setProperty('--winner', config.styles.winnerColor);
+            document.documentElement.style.setProperty('--winner-text', config.styles.winnerTextColor || config.styles.winnerColor || '#00cc66');
+            document.documentElement.style.setProperty('--winner-record', config.styles.winnerRecordColor || config.styles.winnerTextColor || '#371F06');
+            document.documentElement.style.setProperty('--loser', config.styles.loserColor);
+            document.documentElement.style.setProperty('--tournament-scale', config.styles.tournamentScale);
+            document.documentElement.style.setProperty('--name-text', config.styles.nameTextColor || config.styles.textColor);
+            document.documentElement.style.setProperty('--stats-text', config.styles.statsTextColor || '#d3d3d3');
+            document.documentElement.style.setProperty('--seed-badge', config.styles.seedBadgeColor || config.styles.accentColor);
+            document.documentElement.style.setProperty('--percentage-badge', config.styles.percentageBadgeColor || config.styles.accentColor);
+            document.documentElement.style.setProperty('--seed-badge-text', config.styles.seedBadgeTextColor || '#ffffff');
+            document.documentElement.style.setProperty('--wins-badge-text', config.styles.winsBadgeTextColor || '#ffffff');
+            document.documentElement.style.setProperty('--losses-badge-text', config.styles.lossesBadgeTextColor || '#ffffff');
+            document.documentElement.style.setProperty('--percentage-badge-text', config.styles.percentageBadgeTextColor || '#ffffff');
+            document.documentElement.style.setProperty('--standing-rank1-bg', config.styles.standingRank1BgColor || '#ffd700');
+            document.documentElement.style.setProperty('--standing-rank1-text', config.styles.standingRank1TextColor || '#000000');
+            document.documentElement.style.setProperty('--standing-rank2-bg', config.styles.standingRank2BgColor || '#c0c0c0');
+            document.documentElement.style.setProperty('--standing-rank2-text', config.styles.standingRank2TextColor || '#000000');
+            document.documentElement.style.setProperty('--standing-rank3-bg', config.styles.standingRank3BgColor || '#cd7f32');
+            document.documentElement.style.setProperty('--standing-rank3-text', config.styles.standingRank3TextColor || '#000000');
+            document.documentElement.style.setProperty('--standing-rank4-bg', config.styles.standingRank4BgColor || '#a60000');
+            document.documentElement.style.setProperty('--standing-rank4-text', config.styles.standingRank4TextColor || '#ffffff');
+            document.documentElement.style.setProperty('--standing-rank5-bg', config.styles.standingRank5BgColor || '#a60000');
+            document.documentElement.style.setProperty('--standing-rank5-text', config.styles.standingRank5TextColor || '#ffffff');
+            document.documentElement.style.setProperty('--standing-rank-others-bg', config.styles.standingRankOthersBgColor || '#333333');
+            document.documentElement.style.setProperty('--standing-rank-others-text', config.styles.standingRankOthersTextColor || '#ffffff');
+            document.documentElement.style.setProperty('--standings-title-color', config.styles.standingsTitleColor || config.styles.textColor || '#ffffff');
+            document.documentElement.style.setProperty('--standings-points-color', config.styles.standingsPointsColor || config.styles.winnerColor || '#00cc66');
+            document.documentElement.style.setProperty('--standings-record-color', config.styles.standingsRecordColor || config.styles.statsTextColor || '#d3d3d3');
+            document.documentElement.style.setProperty('--standings-player-name-color', config.styles.standingsPlayerNameColor || config.styles.nameTextColor || '#ffffff');
+            document.documentElement.style.setProperty('--standings-bg-color', config.styles.standingsBgColor || config.styles.backgroundColor);
+            document.documentElement.style.setProperty('--standings-player-bg-color', config.styles.standingsPlayerBgColor || config.styles.playerCardColor);
+            document.documentElement.style.setProperty('--standings-stats-bg-color', config.styles.standingsStatsBgColor || config.styles.statsCardColor);
+            document.documentElement.style.setProperty('--standings-border-color', config.styles.standingsBorderColor || config.styles.borderColor);
+
+            const statusElement = document.getElementById('tournament-status');
+            if (statusElement) {
+                statusElement.textContent = getTournamentStatus(config.tournamentData);
+                statusElement.style.backgroundColor = config.styles.accentColor;
+                statusElement.style.color = config.styles.titleColor;
+            }
+
+            const matchesContainer = document.getElementById('active-matches');
+            if (!matchesContainer) return;
+
+            const currentMatches = config.tournamentData.currentMatches;
+            const settings = config.tournamentData.settings;
+            const maxVisible = settings.maxVisibleMatches || 2;
+            const remainingMatches = currentMatches.length - maxVisible;
+            const remainingElement = document.getElementById('remaining-matches');
+
+            if (remainingElement) {
+                remainingElement.textContent = `${remainingMatches} more match${remainingMatches !== 1 ? 'es' : ''} in this bracket`;
+                remainingElement.style.opacity = remainingMatches > 0 ? '1' : '0';
+            }
+
+            const standingsContainer = document.getElementById('standings-container');
+            if (standingsContainer) {
+                console.log("Standings display enabled:", settings.showStandings);
+                console.log("Tournament format:", settings.format);
+
+                if (settings.showStandings || settings.format === 'round-robin') {
+                    if (settings.splitStandings) {
+                        console.log("Using split standings display");
+                        standingsContainer.innerHTML = '';
+
+                        const existingSplit = document.querySelector(`#${tournamentId}_standings_split`);
+                        if (existingSplit) {
+                            existingSplit.remove();
+                        }
+
+                        const tournamentWrapper = document.getElementById(tournamentId) ||
+                            document.querySelector('.tournamentOverlay').closest('.position-wrapper');
+
+                        if (!tournamentWrapper) {
+                            console.error('Could not find tournament wrapper to append standings');
+                            return;
+                        }
+
+                        const splitWrapper = document.createElement('div');
+                        splitWrapper.id = `${tournamentId}_standings_split`;
+                        splitWrapper.className = 'position-wrapper';
+
+                        const standingsPosition = settings.standingsPosition || 'Middle Right';
+                        const positionClass = standingsPosition.toLowerCase().replace(' ', '-');
+                        splitWrapper.classList.add(positionClass);
+
+                        const innerPosition = document.createElement('div');
+                        innerPosition.className = 'inner-position';
+
+                        const splitContainer = document.createElement('div');
+                        splitContainer.className = 'standings-split-container';
+
+                        const standingsHtml = createTournamentStandings(config.tournamentData, settings);
+                        splitContainer.innerHTML = standingsHtml;
+
+                        const standingsElement = splitContainer.querySelector('.standings');
+                        if (standingsElement) {
+                            standingsElement.classList.add(positionClass);
+
+                            const standingRows = splitContainer.querySelectorAll('.standing-row');
+                            standingRows.forEach((row, index) => {
+                                row.style.animation = 'none';
+                                row.offsetHeight;
+                                row.style.animation = '';
+                                row.style.setProperty('--row-index', index.toString());
+                            });
+
+                            if (standingsPosition === 'Custom' && settings.standingsCustomCoords) {
+                                const coords = settings.standingsCustomCoords;
+                                standingsElement.style.margin = '0';
+
+                                if (coords.top !== null) {
+                                    innerPosition.style.top = `${coords.top}px`;
+                                }
+                                if (coords.bottom !== null) {
+                                    innerPosition.style.bottom = `${coords.bottom}px`;
+                                    innerPosition.style.top = 'auto';
+                                }
+                                if (coords.left !== null) {
+                                    innerPosition.style.left = `${coords.left}px`;
+                                }
+                                if (coords.right !== null) {
+                                    innerPosition.style.right = `${coords.right}px`;
+                                    innerPosition.style.left = 'auto';
+                                }
+                            } else {
+                                innerPosition.style.margin = '20px';
+                            }
+                        }
+
+                        innerPosition.appendChild(splitContainer);
+                        splitWrapper.appendChild(innerPosition);
+
+                        const mainWrapper = document.getElementById('wrapper') ||
+                            tournamentWrapper.closest('.wrapper') ||
+                            tournamentWrapper.parentElement;
+
+                        if (mainWrapper) {
+                            mainWrapper.appendChild(splitWrapper);
+                        } else {
+                            tournamentWrapper.parentElement.appendChild(splitWrapper);
+                        }
+
+                        setTimeout(() => {
+                            const standingsNames = splitContainer.querySelectorAll('.standings-player-name');
+                            standingsNames.forEach(nameElement => {
+                                fitText(nameElement);
+                            });
+                        }, 100);
+                    } else {
+                        console.log("Using inline standings display");
+                        standingsContainer.innerHTML = createTournamentStandings(config.tournamentData, settings);
+
+                        setTimeout(() => {
+                            const standingsNames = document.querySelectorAll('.standings-player-name');
+                            standingsNames.forEach(nameElement => {
+                                fitText(nameElement);
+                            });
+                        }, 100);
+                    }
+                } else {
+                    console.log("Standings display disabled, clearing container");
+                    standingsContainer.innerHTML = '';
+
+                    const existingSplit = document.querySelector(`#${tournamentId}_standings_split`);
+                    if (existingSplit) {
+                        existingSplit.remove();
+                    }
+                }
+            }
+
+            console.log('Checking for winner...');
+            console.log('config.tournamentData.winner:', config.tournamentData.winner);
+            console.log('config.ended:', config.ended);
+
+            if (config.tournamentData.winner && config.ended) {
+                console.log('Both conditions met, calling showWinnerDisplay');
+                showWinnerDisplay(config.tournamentData.winner);
+            } else {
+                console.log('Conditions not met for showing winner');
+            }
+
+            const visibleMatches = currentMatches.slice(0, maxVisible);
+
+            Array.from(matchesContainer.children).forEach(child => {
+                const matchId = child.getAttribute('data-match-id');
+                if (!visibleMatches.some(m => m.id === matchId) && !child.classList.contains('removing')) {
+                    child.classList.add('removing');
+
+                    const rect = child.getBoundingClientRect();
+                    const parentRect = matchesContainer.getBoundingClientRect();
+
+                    child.style.position = 'absolute';
+                    child.style.top = `${rect.top - parentRect.top}px`;
+                    child.style.left = '0';
+                    child.style.width = '100%';
+                    child.style.animation = 'matchExitFade 0.4s ease-out forwards';
+
+                    setTimeout(() => {
+                        if (child.parentNode === matchesContainer) {
+                            matchesContainer.removeChild(child);
+                        }
+                    }, 400);
+                }
+            });
+
+            const visibleCount = Math.min(maxVisible, currentMatches.length);
+            matchesContainer.style.minHeight = `${visibleCount * 170}px`;
+
+            const bracketNames = getBracketNames();
+            const format = config.tournamentData.settings?.format || config.settings?.format || 'double-elimination';
+
+            const getBracketLabel = (matchBracket) => {
+                switch (matchBracket) {
+                    case 'winners':
+                        return format === 'single-elimination' ? bracketNames.singleElimination : bracketNames.winners;
+                    case 'losers':
+                        return bracketNames.losers;
+                    case 'final':
+                        return bracketNames.finals;
+                    case 'round-robin':
+                        return 'Round Robin';
+                    default:
+                        return matchBracket;
+                }
+            };
+
+            visibleMatches.forEach((match, index) => {
+                let matchEl = Array.from(matchesContainer.children).find(
+                    child => child.getAttribute('data-match-id') === match.id
+                );
+
+                if (!matchEl) {
+                    matchEl = document.createElement('div');
+                    matchEl.className = 'match-card adding';
+                    matchEl.setAttribute('data-match-id', match.id);
+                    matchesContainer.appendChild(matchEl);
+
+                    matchEl.addEventListener('animationend', () => {
+                        matchEl.classList.remove('adding');
+                    }, { once: true });
+                }
+
+                const bracketLabel = getBracketLabel(match.bracket);
+                const bracketInfo = settings.showBracket && bracketLabel ?
+                    `<span class="bracket-info">(${bracketLabel})</span>` : '';
+
+                matchEl.innerHTML = `
+                    <div class="match-title">Match ${match.matchNumber} ${bracketInfo}</div>
+                    <div class="match-content">
+                        <div class="player ${settings.twoLineLayout ? 'two-line' : 'one-line'}" style="--player-index: 0;">
+                            <div class="player-name">${match.player1.name}</div>
+                            <div class="player-stats ${settings.coloredStatBadges ? 'badges' : 'simple'}">
+                                ${createPlayerStats(match.player1, settings)}
+                            </div>
+                        </div>
+                        <div class="player ${settings.twoLineLayout ? 'two-line' : 'one-line'}" style="--player-index: 1;">
+                            <div class="player-name">${match.player2.name}</div>
+                            <div class="player-stats ${settings.coloredStatBadges ? 'badges' : 'simple'}">
+                                ${createPlayerStats(match.player2, settings)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                requestAnimationFrame(() => {
+                    const playerNames = matchEl.querySelectorAll('.player-name');
+                    playerNames.forEach(nameElement => {
+                        fitText(nameElement);
+                    });
+                });
+
+                if (settings.animateMatches) {
+                    matchEl.querySelectorAll('.player').forEach((player, idx) => {
+                        player.style.opacity = '0';
+                        player.style.animation = `fadeInUp 0.4s ${idx * 0.1 + 0.1}s ease forwards`;
+                    });
+                } else {
+                    matchEl.querySelectorAll('.player').forEach((player) => {
+                        player.style.animation = 'fadeInUp 0.4s ease forwards';
+                    });
+                }
+            });
+
+            setTimeout(() => {
+                fitAllPlayerNames();
+            }, 100);
+        }
+
+        /**
+         * Fit text into container by adjusting font size
+         */
+        function fitText(element) {
+            const styles = window.getComputedStyle(element);
+            const fontSize = parseFloat(styles.fontSize);
+
+            let minSize = fontSize * 0.5;
+            let maxSize = fontSize;
+
+            if (element.scrollWidth <= element.clientWidth + 2) {
+                element.classList.add('fitted');
+                return;
+            }
+
+            let currentSize = fontSize;
+            let iterations = 0;
+
+            while (iterations < 10) {
+                iterations++;
+
+                currentSize = (minSize + maxSize) / 2;
+                element.style.fontSize = `${currentSize}px`;
+
+                if (element.scrollWidth <= element.clientWidth) {
+                    minSize = currentSize;
+                } else {
+                    maxSize = currentSize;
+                }
+
+                if (maxSize - minSize < 0.5) {
+                    break;
+                }
+            }
+
+            element.style.fontSize = `${currentSize * 0.95}px`;
+            element.classList.add('fitted');
+        }
+
+        /**
+         * Apply font fitting to all player names
+         */
+        function fitAllPlayerNames() {
+            const playerNames = document.querySelectorAll('.match-card:not(.removing) .player-name');
+
+            playerNames.forEach(nameElement => {
+                nameElement.style.fontSize = '';
+
+                requestAnimationFrame(() => {
+                    fitText(nameElement);
+                });
+            });
+        }
+
+        /**
+         * Apply font fitting to standings player names
+         */
+        function fitStandingsNames() {
+            const standingsNames = document.querySelectorAll('.standings-player-name');
+
+            standingsNames.forEach(nameElement => {
+                nameElement.style.fontSize = '';
+
+                requestAnimationFrame(() => {
+                    fitText(nameElement);
+                });
+            });
+        }
+
+        /**
+         * Handles tournament status updates
+         */
+        function updateTournamentState(config) {
+            const tournamentId = `tournament_${config.tournamentTitle.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            const tournamentElement = document.getElementById(tournamentId) || document.querySelector('.tournamentOverlay');
+
+            if (!tournamentElement) return;
+        }
+
+        function cloneConfigSegment(segment) {
+            if (!segment) {
+                return segment;
+            }
+            try {
+                return JSON.parse(JSON.stringify(segment));
+            } catch (err) {
+                console.warn('Failed to clone config segment', err);
+                return segment;
+            }
+        }
+
+        function applyConfigUpdate(newConfig) {
+            if (!newConfig) return;
+
+            CONFIG.tournamentTitle = newConfig.tournamentTitle;
+            CONFIG.tournamentData = cloneConfigSegment(newConfig.tournamentData) || CONFIG.tournamentData;
+            CONFIG.styles = cloneConfigSegment(newConfig.styles) || CONFIG.styles;
+            CONFIG.settings = cloneConfigSegment(
+                newConfig.settings || newConfig.tournamentData?.settings || CONFIG.settings
+            );
+            CONFIG.position = newConfig.position ?? CONFIG.position;
+            CONFIG.customCoords = cloneConfigSegment(newConfig.customCoords) || CONFIG.customCoords;
+        }
+
+        if (CONFIG && CONFIG.tournamentData) {
+            console.log('Initial tournament display:', CONFIG);
+            updateTournamentDisplay(CONFIG);
+        }
+
+        window.addEventListener('tournamentSystemUpdate', (event) => {
+            console.log('Received tournamentSystemUpdate event:', event);
+            const { detail } = event;
+
+            if (!detail || !detail.config) {
+                console.error('Missing detail or config in update event');
+                return;
+            }
+
+            console.log('Processing update with config:', detail.config);
+            applyConfigUpdate(detail.config);
+            updateTournamentState(detail.config);
+            updateTournamentDisplay(detail.config);
+        });
+
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                fitAllPlayerNames();
+            }, 250);
+        });
+    </script>
+</div>
