@@ -5,6 +5,7 @@ import {
     SettingUpdate,
     TournamentSettings,
     TournamentState,
+    PlayerActionType,
 } from "../types/types";
 import { tournamentManager } from "../utility/tournament-manager";
 import updaterTemplate from "../templates/updater-template.html";
@@ -274,6 +275,16 @@ export function tournamentSystemUpdateEffectType() {
 
             ensureCustomBracketNameSettingsLocal($scope.effect.settings);
 
+            if (!$scope.effect.playerAction) {
+                $scope.effect.playerAction = "add";
+            }
+            if ($scope.effect.playerName === undefined || $scope.effect.playerName === null) {
+                $scope.effect.playerName = "";
+            }
+            if ($scope.effect.replacementPlayerName === undefined || $scope.effect.replacementPlayerName === null) {
+                $scope.effect.replacementPlayerName = "";
+            }
+
             /**
              * Loads active tournaments from the backend
              */
@@ -501,6 +512,8 @@ export function tournamentSystemUpdateEffectType() {
                     if (!$scope.effect.matchNumber || $scope.effect.matchNumber <= 0) {
                         $scope.effect.matchNumber = 1;
                     }
+                } else if (newMode === "playerActions" && !$scope.effect.playerAction) {
+                    $scope.effect.playerAction = "add";
                 }
             });
 
@@ -692,6 +705,37 @@ export function tournamentSystemUpdateEffectType() {
                             modules.eventManager,
                             drawHandling
                         );
+                        break;
+
+                    case "playerActions":
+                        const playerAction = (event.effect.playerAction || "add") as PlayerActionType;
+                        const playerNameInput = (event.effect.playerName || "").trim();
+                        const replacementNameInput = (event.effect.replacementPlayerName || "").trim();
+
+                        if (!playerNameInput) {
+                            logger.warn(`Player name is required for player actions on ${tournamentId}`);
+                            return { success: false };
+                        }
+
+                        if (playerAction === "add") {
+                            await tournamentManager.addPlayer(tournamentId, playerNameInput);
+                        } else if (playerAction === "remove") {
+                            await tournamentManager.removePlayer(tournamentId, playerNameInput);
+                        } else if (playerAction === "replace") {
+                            if (!replacementNameInput) {
+                                logger.warn(`Replacement name is required when replacing players on ${tournamentId}`);
+                                return { success: false };
+                            }
+                            await tournamentManager.replacePlayer(
+                                tournamentId,
+                                playerNameInput,
+                                replacementNameInput
+                            );
+                        } else {
+                            logger.warn(`Unknown player action "${playerAction}" requested for ${tournamentId}`);
+                            return { success: false };
+                        }
+
                         break;
 
                     case "updateStyles":

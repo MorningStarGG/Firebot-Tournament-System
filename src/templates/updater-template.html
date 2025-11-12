@@ -34,6 +34,7 @@
         <select class="form-control" ng-model="effect.mode" ng-change="effectValueChanged()"
             aria-labelledby="updateModeLabel">
             <option value="setWinner">Set Match Winner</option>
+            <option value="playerActions">Player Actions</option>
             <option value="updateStyles">Update Styles/Colors</option>
             <option value="updateSettings">Update Tournament Settings</option>
             <option value="updateStandings">Update Standings Settings</option>
@@ -133,6 +134,36 @@
                 <option value="random">Random Winner Selection</option>
             </select>
         </div>
+    </div>
+</eos-container>
+
+<!-- Player Actions section -->
+<eos-container ng-if="effect.mode === 'playerActions'" header="Player Actions" pad-top="true"
+    aria-label="Add, remove, or replace tournament players before the event starts">
+    <div class="input-group" style="margin-bottom: 10px;">
+        <span class="input-group-addon" id="playerActionLabel">Player Action</span>
+        <select class="form-control" ng-model="effect.playerAction" aria-labelledby="playerActionLabel">
+            <option value="add">Add Player</option>
+            <option value="remove">Remove Player</option>
+            <option value="replace">Replace Player</option>
+        </select>
+    </div>
+
+    <div style="margin-bottom: 10px;">
+        <firebot-input input-title="Player Name" model="effect.playerName" placeholder="Player to add or remove"
+            aria-label="Player name to add, remove, or replace">
+        </firebot-input>
+    </div>
+
+    <div ng-if="effect.playerAction === 'replace'" style="margin-bottom: 10px;">
+        <firebot-input input-title="Replacement Name" model="effect.replacementPlayerName"
+            placeholder="Replacement player name" aria-label="Replacement player name">
+        </firebot-input>
+    </div>
+
+    <div class="alert alert-info" role="alert" aria-label="Player action limitations">
+        Player edits are only available before a tournament has started. Use this to finalize the roster before
+        running the start action.
     </div>
 </eos-container>
 

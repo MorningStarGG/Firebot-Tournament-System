@@ -123,6 +123,101 @@ class TournamentManager {
     }
 
     /**
+     * Determines if matches have already been generated for a tournament
+     */
+    private hasGeneratedMatches(tournament: TournamentState): boolean {
+        return (
+            (tournament.tournamentData.matchCounter ?? 0) > 0 ||
+            tournament.tournamentData.currentMatches.length > 0 ||
+            tournament.tournamentData.completedMatches.length > 0
+        );
+    }
+
+    /**
+     * Rebuilds tournament player structures without generating matches
+     */
+    private rebuildTournamentState(tournamentState: TournamentState, playerNames: string[]): void {
+        const format = tournamentState.tournamentData.settings.format;
+        const players: Player[] = playerNames
+            .map(name => name.trim())
+            .filter(Boolean)
+            .map(name => ({
+                name,
+                wins: 0,
+                losses: 0,
+                draws: 0,
+                eliminated: false,
+                seed: 0
+            }));
+
+        const shuffledPlayers = this.shuffle(players);
+        shuffledPlayers.forEach((player, index) => player.seed = index + 1);
+
+        let winnersPlayers = format === 'round-robin' ? [] : [...shuffledPlayers];
+        let losersPlayers: Player[] = [];
+        let bracketStage: 'winners' | 'losers' | 'final' | 'round-robin' = 'winners';
+
+        if (format === 'round-robin') {
+            bracketStage = 'round-robin';
+        } else if (format === 'single-elimination') {
+            losersPlayers = [];
+        }
+
+        tournamentState.tournamentData.players = shuffledPlayers;
+        tournamentState.tournamentData.winnersPlayers = winnersPlayers;
+        tournamentState.tournamentData.losersPlayers = losersPlayers;
+        tournamentState.tournamentData.eliminatedPlayers = [];
+        tournamentState.tournamentData.currentMatches = [];
+        tournamentState.tournamentData.completedMatches = [];
+        tournamentState.tournamentData.matchCounter = 0;
+        tournamentState.tournamentData.winnersRound = 1;
+        tournamentState.tournamentData.losersRound = 1;
+        tournamentState.tournamentData.bracketStage = bracketStage;
+        tournamentState.tournamentData.winner = null;
+        tournamentState.tournamentData.requireTrueFinal = false;
+        tournamentState.tournamentData.trueFinalPlayed = false;
+        tournamentState.tournamentData.initialPlayerCount = shuffledPlayers.length;
+
+        if (format === 'round-robin') {
+            tournamentState.tournamentData.standings = {};
+        } else {
+            tournamentState.tournamentData.standings = undefined;
+        }
+    }
+
+    /**
+     * Sends overlay updates to both updater and main tournament overlays
+     */
+    private async broadcastOverlayUpdates(
+        tournamentId: string,
+        tournament: TournamentState,
+        overlayConfigOverride?: any,
+        options?: { forceMainOverlay?: boolean }
+    ): Promise<void> {
+        const overlayConfig = overlayConfigOverride ?? buildTournamentOverlayConfig(tournamentId, tournament);
+
+        await webServer.sendToOverlay("tournament-updater", {
+            type: 'update',
+            overlayInstance: tournament.overlayInstance,
+            config: overlayConfig
+        });
+
+        const shouldSendMainOverlay = options?.forceMainOverlay ?? this.hasGeneratedMatches(tournament);
+
+        if (shouldSendMainOverlay) {
+            await webServer.sendToOverlay("tournament-system", {
+                uuid: tournament.uuid,
+                overlayInstance: tournament.overlayInstance,
+                config: overlayConfig
+            });
+        } else {
+            logger.info(
+                `Tournament ${tournamentId} does not have generated matches yet. Skipping viewer overlay update.`
+            );
+        }
+    }
+
+    /**
      * Gets a tournament by ID
      */
     async getTournament(tournamentId: string): Promise<TournamentState | undefined> {
@@ -283,8 +378,22 @@ class TournamentManager {
      * Starts a tournament
      */
     async startTournament(tournamentId: string, eventManager: any) {
-        const tournament = await this.getTournament(tournamentId);
+        let tournament = await this.getTournament(tournamentId);
         if (!tournament) return;
+
+        if (!this.hasGeneratedMatches(tournament)) {
+            if ((tournament.tournamentData.players?.length || 0) < 2) {
+                logger.warn(`Cannot start tournament ${tournamentId} - at least two players are required.`);
+                return;
+            }
+
+            await this.createInitialMatches(tournamentId);
+            tournament = await this.getTournament(tournamentId);
+            if (!tournament) {
+                logger.error(`Tournament ${tournamentId} missing after generating matches.`);
+                return;
+            }
+        }
 
         tournament.ended = false;
         tournament.updatedAt = new Date().toISOString();
@@ -297,10 +406,8 @@ class TournamentManager {
         });
 
         const overlayConfig = buildTournamentOverlayConfig(tournamentId, tournament);
-        await webServer.sendToOverlay("tournament-updater", {
-            type: 'update',
-            overlayInstance: tournament.overlayInstance,
-            config: overlayConfig
+        await this.broadcastOverlayUpdates(tournamentId, tournament, overlayConfig, {
+            forceMainOverlay: true
         });
     }
 
@@ -1368,77 +1475,193 @@ class TournamentManager {
         if (!tournamentState) return;
 
         const playerNames = tournamentState.tournamentData.players.map(p => p.name);
-        const format = tournamentState.tournamentData.settings.format;
-        const initialPlayerCount = playerNames.length;
-        const players = playerNames.map(name => ({
-            name,
-            wins: 0,
-            losses: 0,
-            eliminated: false,
-            seed: 0
-        }));
-        const shuffled = this.shuffle([...players]);
-        shuffled.forEach((player, index) => player.seed = index + 1);
-
-        let winnersPlayers = [...shuffled];
-        let losersPlayers: Player[] = [];
-        let eliminatedPlayers: Player[] = [];
-
-        if (format === 'round-robin') {
-            winnersPlayers = [];
-        } else if (format === 'single-elimination') {
-            losersPlayers = [];
-        }
-
-        const currentMatches: Match[] = [];
-        const completedMatches: Match[] = [];
-        const matchCounter = 0;
-
-        const winnersRound = 1;
-        const losersRound = 1;
-        const bracketStage = format === 'round-robin' ? 'round-robin' as any : 'winners';
-        const winner = null;
-        const requireTrueFinal = false;
-        const trueFinalPlayed = false;
-
-        tournamentState.tournamentData = {
-            ...tournamentState.tournamentData,
-            players: shuffled,
-            winnersPlayers,
-            losersPlayers,
-            eliminatedPlayers,
-            currentMatches,
-            completedMatches,
-            matchCounter,
-            winnersRound,
-            losersRound,
-            bracketStage,
-            winner,
-            requireTrueFinal,
-            trueFinalPlayed,
-            initialPlayerCount,
-            standings: format === 'round-robin' ? {} : undefined
-        };
+        this.rebuildTournamentState(tournamentState, playerNames);
 
         tournamentState.ended = false;
         tournamentState.paused = false;
         tournamentState.manuallyEnded = false;
         tournamentState.updatedAt = new Date().toISOString();
 
-        await this.createInitialMatches(tournamentId);
-
         await this.updateTournament(tournamentId, tournamentState);
 
-        const overlayConfig = {
-            ...buildTournamentOverlayConfig(tournamentId, tournamentState),
-            ended: false,
-            isResetting: true
-        };
+        const baseOverlayConfig = buildTournamentOverlayConfig(tournamentId, tournamentState);
+        const shouldBroadcastMain = this.hasGeneratedMatches(tournamentState);
+
         await webServer.sendToOverlay("tournament-updater", {
             type: 'update',
             overlayInstance: tournamentState.overlayInstance,
-            config: overlayConfig
+            config: {
+                ...baseOverlayConfig,
+                ended: false,
+                isResetting: true
+            }
         });
+        if (shouldBroadcastMain) {
+            await webServer.sendToOverlay("tournament-system", {
+                uuid: tournamentState.uuid,
+                overlayInstance: tournamentState.overlayInstance,
+                config: baseOverlayConfig
+            });
+        } else {
+            logger.info(
+                `Tournament ${tournamentId} reset before any matches were generated. Viewer overlay update skipped.`
+            );
+        }
+    }
+
+    /**
+     * Adds a player to a tournament before it starts
+     */
+    async addPlayer(tournamentId: string, playerName: string): Promise<void> {
+        const tournament = await this.getTournament(tournamentId);
+        if (!tournament) {
+            throw new Error(`Tournament not found: ${tournamentId}`);
+        }
+
+        if (this.hasGeneratedMatches(tournament)) {
+            throw new Error(`Cannot add players to ${tournamentId} after it has started.`);
+        }
+
+        const sanitizedName = playerName.trim();
+        if (!sanitizedName) {
+            throw new Error('Player name cannot be empty.');
+        }
+
+        const existingNames = tournament.tournamentData.players.map(p => p.name);
+        if (existingNames.some(name => name.toLowerCase() === sanitizedName.toLowerCase())) {
+            throw new Error(`Player "${sanitizedName}" already exists in ${tournamentId}.`);
+        }
+
+        const updatedNames = [...existingNames, sanitizedName];
+        this.rebuildTournamentState(tournament, updatedNames);
+        tournament.updatedAt = new Date().toISOString();
+
+        await this.updateTournament(tournamentId, tournament);
+        await this.broadcastOverlayUpdates(tournamentId, tournament);
+
+        logger.info(`Player "${sanitizedName}" added to ${tournamentId}.`);
+    }
+
+    /**
+     * Removes a player from a tournament before it starts
+     */
+    async removePlayer(tournamentId: string, playerName: string): Promise<void> {
+        const tournament = await this.getTournament(tournamentId);
+        if (!tournament) {
+            throw new Error(`Tournament not found: ${tournamentId}`);
+        }
+
+        if (this.hasGeneratedMatches(tournament)) {
+            throw new Error(`Cannot remove players from ${tournamentId} after it has started.`);
+        }
+
+        const sanitizedName = playerName.trim();
+        if (!sanitizedName) {
+            throw new Error('Player name cannot be empty.');
+        }
+
+        const existingNames = tournament.tournamentData.players.map(p => p.name);
+        const index = existingNames.findIndex(name => name.toLowerCase() === sanitizedName.toLowerCase());
+        if (index === -1) {
+            throw new Error(`Player "${sanitizedName}" was not found in ${tournamentId}.`);
+        }
+
+        existingNames.splice(index, 1);
+        this.rebuildTournamentState(tournament, existingNames);
+        tournament.updatedAt = new Date().toISOString();
+
+        await this.updateTournament(tournamentId, tournament);
+        await this.broadcastOverlayUpdates(tournamentId, tournament);
+
+        logger.info(`Player "${sanitizedName}" removed from ${tournamentId}.`);
+    }
+
+    /**
+     * Replaces a player name (allowed even after the tournament has started)
+     */
+    async replacePlayer(tournamentId: string, existingName: string, newName: string): Promise<void> {
+        const tournament = await this.getTournament(tournamentId);
+        if (!tournament) {
+            throw new Error(`Tournament not found: ${tournamentId}`);
+        }
+
+        const sanitizedExistingName = existingName.trim();
+        const sanitizedNewName = newName.trim();
+
+        if (!sanitizedExistingName || !sanitizedNewName) {
+            throw new Error('Both the existing and replacement player names are required.');
+        }
+
+        const normalizedExisting = sanitizedExistingName.toLowerCase();
+        const normalizedNew = sanitizedNewName.toLowerCase();
+
+        const existingNames = tournament.tournamentData.players.map(p => p.name);
+        const existingIndex = existingNames.findIndex(
+            name => name.toLowerCase() === sanitizedExistingName.toLowerCase()
+        );
+
+        if (existingIndex === -1) {
+            throw new Error(`Player "${sanitizedExistingName}" was not found in ${tournamentId}.`);
+        }
+
+        const newNameTaken = tournament.tournamentData.players.some((player, idx) => {
+            if (idx === existingIndex) {
+                return false;
+            }
+            return player.name.trim().toLowerCase() === normalizedNew;
+        });
+
+        if (normalizedExisting !== normalizedNew && newNameTaken) {
+            throw new Error(`Player "${sanitizedNewName}" already exists in ${tournamentId}.`);
+        }
+
+        const renamePlayerRef = (player?: Player | null): void => {
+            if (!player) {
+                return;
+            }
+            if (player.name.trim().toLowerCase() === normalizedExisting) {
+                player.name = sanitizedNewName;
+            }
+        };
+
+        const renamePlayerCollection = (players?: Player[]): void => {
+            players?.forEach(renamePlayerRef);
+        };
+
+        const renameMatchCollection = (matches?: Match[]): void => {
+            matches?.forEach(match => {
+                renamePlayerRef(match.player1);
+                renamePlayerRef(match.player2);
+                renamePlayerRef(match.winner ?? undefined);
+            });
+        };
+
+        renamePlayerCollection(tournament.tournamentData.players);
+        renamePlayerCollection(tournament.tournamentData.winnersPlayers);
+        renamePlayerCollection(tournament.tournamentData.losersPlayers);
+        renamePlayerCollection(tournament.tournamentData.eliminatedPlayers);
+        renameMatchCollection(tournament.tournamentData.currentMatches);
+        renameMatchCollection(tournament.tournamentData.completedMatches);
+        renamePlayerRef(tournament.tournamentData.winner ?? undefined);
+
+        if (tournament.tournamentData.settings.format === 'round-robin' && tournament.tournamentData.standings) {
+            const standingsEntries = Object.entries(tournament.tournamentData.standings);
+            const matchingEntry = standingsEntries.find(([playerName]) => playerName.toLowerCase() === normalizedExisting);
+            if (matchingEntry) {
+                const [entryKey, standing] = matchingEntry;
+                delete tournament.tournamentData.standings[entryKey];
+                tournament.tournamentData.standings[sanitizedNewName] = standing;
+            }
+        }
+
+        tournament.updatedAt = new Date().toISOString();
+
+        await this.updateTournament(tournamentId, tournament);
+        await this.broadcastOverlayUpdates(tournamentId, tournament);
+
+        logger.info(
+            `Player "${sanitizedExistingName}" replaced with "${sanitizedNewName}" in ${tournamentId}.`
+        );
     }
 
     /**

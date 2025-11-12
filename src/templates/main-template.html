@@ -8,42 +8,12 @@
     <firebot-input input-title="Tournament Title" model="effect.tournamentTitle" placeholder="Enter tournament title"
         aria-label="Enter the title for your tournament"></firebot-input>
 
-    <h4>Tournament Players Input Mode</h4>
-    <label class="control-fb control--checkbox" aria-label="Toggle between custom variable and manual input">Use Custom
-        Variable or File
-        <input type="checkbox" ng-model="effect.tournamentOptions.useTextArea">
-        <div class="control__indicator"></div>
-    </label>
-    <div ng-if="effect.tournamentOptions.useTextArea" aria-label="Custom variable or file input section">
-        <firebot-input input-title="Variable/File" model="effect.tournamentOptions.textAreaInput"
-            placeholder="Enter one player per line or use $variable"
-            aria-label="Enter tournament players or variable"></firebot-input>
-        <div style="margin: 10px 0;" class="alert alert-warning" role="alert">
-            <i class="fas fa-sync"></i>
-            Only ONE player PER LINE in your file or variable!
-        </div>
+    <div class="alert alert-info" role="alert" style="margin-top: 15px;"
+        aria-label="Player management information message">
+        <i class="fad fa-info-circle"></i>
+        After creating this tournament, open the updater and use the <strong>Player Actions</strong> mode to add,
+        remove, or replace competitors before starting the bracket.
     </div>
-
-    <div style="margin-top: 15px" ng-if="!effect.tournamentOptions.useTextArea"
-        aria-label="Manual tournament players input section">
-        <h4>Tournament Players</h4>
-        <div style="margin-bottom: 10px;" ng-repeat="player in effect.tournamentOptions.playersList track by $index">
-            <div class="input-group">
-                <span class="input-group-addon">Player {{$index + 1}}</span>
-                <input type="text" class="form-control" ng-model="effect.tournamentOptions.playersList[$index]"
-                    aria-label="Enter player {{$index + 1}}">
-                <span class="input-group-btn">
-                    <button class="btn btn-danger" ng-click="removePlayer($index)"
-                        aria-label="Remove player {{$index + 1}}">
-                        <i class="far fa-trash-alt"></i>
-                    </button>
-                </span>
-            </div>
-        </div>
-        <button class="btn btn-primary" ng-click="addPlayer()" aria-label="Add new tournament player">Add
-            Player</button>
-    </div>
-
 </eos-container>
 
 <!-- Tournament Format Section -->

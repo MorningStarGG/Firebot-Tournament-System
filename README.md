@@ -36,15 +36,14 @@ A comprehensive and feature-rich tournament management system for Firebot, desig
 - Best for: League play, skill assessment, small player counts
 
 ### Tournament Creation & Management
-- Create tournaments with multiple players
-- Two input modes:
-  - Manual player entry
-  - Text area/variable input for bulk player entry
-- Automatic seeding system
+- Create tournament ready for any player count
+- Manage player rosters entirely through the Advanced Tournament System Manager (Player Actions)
+- Automatic seeding system applied when players are added
 - Match winner selection
 - Tournament progression tracking
 - Reset tournament with 30-second undo window
-- Manual tournament start/stop
+- Manual tournament start/stop (tournaments are started via the Advanced Tournament System Manager)
+- Player management (add/remove players via the Advanced Tournament System Manager before starting tournament)
 - Tournament backup system with 7-day retention
 - Automatic cleanup of ended tournaments after 7 days
 
@@ -353,9 +352,10 @@ $findTournamentId[searchTerm, mode?]
 2. **Configure basic settings:**
    - Set the tournament title
    - Choose tournament format (Single/Double Elimination or Round-Robin)
-   - Add players (manual or text/variables)
    - Configure visual settings
    - Set positioning
+
+After saving, switch to the **Advanced Tournament System Manager** effect and use the **Player Actions** mode to add or remove competitors before starting the tournament.
 
 3. **Format-Specific Settings:**
 
@@ -376,6 +376,7 @@ $findTournamentId[searchTerm, mode?]
 ### Managing a Tournament
 
 Use the **"Tournament System Updater"** effect for:
+- Manually starting new tournaments via **End/Start Tournament → Start**
 
 1. **Set Match Winner:**
    - Select tournament
@@ -388,10 +389,18 @@ Use the **"Tournament System Updater"** effect for:
    - Adjust display options
    - Update bracket names
 
-3. **Tournament Controls:**
+3. **Player Actions (before starting tournament):**
+   - Add new players to the roster
+   - Remove players who won't be playing
+   - Only available while the tournament has not started
+
+4. **Player Actions (available even after starting tournament):**
+   - Replace/rename a player to fix typos
+
+5. **Tournament Controls:**
    - Show/hide tournament
    - Reset tournament (with 30s undo)
-   - Stop tournament
+   - Start/stop tournament
    - Remove tournament
 
 ### Managing Backups
@@ -453,7 +462,7 @@ Use the **"Advanced Tournament Backup Manager"** effect to:
 3. **Available Components:**
    The script adds three effects for use in Firebot:
    - **Advanced Tournament System** - Create new tournaments
-   - **Advanced Tournament System Updater** - Manage existing tournaments
+   - **Advanced Tournament System Manager** - Manage existing tournaments
    - **Advanced Tournament Backup Manager** - Manage tournament backups
 4. **Available Events:**
    The script also adds three events:

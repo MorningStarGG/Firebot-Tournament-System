@@ -613,7 +613,7 @@
         /* Stats badges container for standings */
         .standing-row.two-line .stats-section {
             display: flex;
-            gap: 6px;
+            gap: 2px;
             flex-wrap: wrap;
             align-items: center;
         }
@@ -2189,6 +2189,15 @@
                 return;
             }
 
+            const shouldShowOverlay = tournamentHasGeneratedMatches(config.tournamentData) || !!config.ended;
+            setOverlayVisibility(container, shouldShowOverlay);
+
+            if (!shouldShowOverlay) {
+                console.log('Tournament has not started yet, keeping overlay hidden.');
+                clearOverlayContentWhenHidden(tournamentId, container);
+                return;
+            }
+
             document.documentElement.style.setProperty('--primary', config.styles.accentColor);
             document.documentElement.style.setProperty('--background', config.styles.backgroundColor);
             document.documentElement.style.setProperty('--text', config.styles.textColor);
@@ -2573,6 +2582,70 @@
                 console.warn('Failed to clone config segment', err);
                 return segment;
             }
+        }
+
+        /**
+         * Determines if the tournament has generated any matches yet
+         */
+        function tournamentHasGeneratedMatches(tournamentData) {
+            if (!tournamentData) {
+                return false;
+            }
+
+            const matchCounter = typeof tournamentData.matchCounter === 'number'
+                ? tournamentData.matchCounter
+                : 0;
+            const currentMatches = Array.isArray(tournamentData.currentMatches)
+                ? tournamentData.currentMatches.length
+                : 0;
+            const completedMatches = Array.isArray(tournamentData.completedMatches)
+                ? tournamentData.completedMatches.length
+                : 0;
+
+            return matchCounter > 0 || currentMatches > 0 || completedMatches > 0;
+        }
+
+        /**
+         * Toggles the main overlay visibility
+         */
+        function setOverlayVisibility(container, shouldShow) {
+            if (!container) return;
+
+            const view = container.querySelector('.tournament-view');
+            if (!view) return;
+
+            if (shouldShow) {
+                view.classList.remove('hidden');
+            } else {
+                view.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Clears overlay content when we want it hidden
+         */
+        function clearOverlayContentWhenHidden(tournamentId, container) {
+            if (!container) return;
+
+            const scopedQuery = (selector) => container.querySelector(selector) || document.querySelector(selector);
+
+            const matchesContainer = scopedQuery('#active-matches');
+            if (matchesContainer) {
+                matchesContainer.innerHTML = '';
+            }
+
+            const standingsContainer = scopedQuery('#standings-container');
+            if (standingsContainer) {
+                standingsContainer.innerHTML = '';
+            }
+
+            const splitContainer = document.getElementById(`${tournamentId}_standings_split`);
+            if (splitContainer) {
+                splitContainer.remove();
+            }
+
+            const winnerDisplays = document.querySelectorAll('.winner-display');
+            winnerDisplays.forEach(display => display.remove());
         }
 
         function applyConfigUpdate(newConfig) {

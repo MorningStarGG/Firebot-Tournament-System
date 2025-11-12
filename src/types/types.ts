@@ -13,12 +13,18 @@ export type TournamentFormat = 'double-elimination' | 'single-elimination' | 'ro
 export type TournamentSelectionMode = 'tournamentList' | 'manual';
 
 /**
- * Actions that can be performed on a tournament
+ * Tournament bracket stages used across the system
  */
-export type TournamentAction = 'create' | 'update' | 'reset' | 'remove';
-export type MatchAction = 'setWinner' | 'reset';
+export type BracketStage = 'winners' | 'losers' | 'final' | 'round-robin';
+
+/**
+ * Tournament lifecycle status actions
+ */
+export type TournamentStatus = 'start' | 'stop';
+
 export type VisibilityAction = 'show' | 'hide';
 export type BackupAction = 'restore' | 'remove';
+export type PlayerActionType = 'add' | 'remove' | 'replace';
 
 /**
  * Winner display graphic options
@@ -60,7 +66,7 @@ export interface Match {
     matchNumber: number;
     player1: Player;
     player2: Player;
-    bracket: 'winners' | 'losers' | 'final' | 'round-robin';
+    bracket: BracketStage;
     round: number;
     isDraw?: boolean;
     resolvedRandomly?: boolean;
@@ -96,6 +102,15 @@ export interface RoundRobinStanding {
 // Tournament Settings
 // ============================================================================
 
+export interface CustomBracketNames {
+    winnersTitle?: string;
+    winnersShortTitle?: string;
+    losersTitle?: string;
+    losersShortTitle?: string;
+    singleEliminationTitle?: string;
+    finalsTitle?: string;
+}
+
 /**
  * Tournament settings configuration
  */
@@ -117,14 +132,7 @@ export interface TournamentSettings {
     twoLineLayout: boolean;
     coloredStatBadges: boolean;
     maxVisibleMatches: number;
-    customBracketNames?: {
-        winnersTitle?: string;
-        winnersShortTitle?: string;
-        losersTitle?: string;
-        losersShortTitle?: string;
-        singleEliminationTitle?: string;
-        finalsTitle?: string;
-    };
+    customBracketNames?: CustomBracketNames;
     useManualShortNames?: boolean;
     showStandings: boolean;
     splitStandings: boolean;
@@ -204,7 +212,7 @@ export interface TournamentData {
     matchCounter: number;
     winnersRound: number;
     losersRound: number;
-    bracketStage: 'winners' | 'losers' | 'final' | 'round-robin';
+    bracketStage: BracketStage;
     winner: Player | null;
     requireTrueFinal: boolean;
     trueFinalPlayed: boolean;
@@ -219,12 +227,7 @@ export interface TournamentData {
  * Tournament options for creation/updating
  */
 export interface TournamentOptionsConfig {
-    playersList: string[];
     resetOnLoad: boolean;
-    useTextArea: boolean;
-    textAreaInput: string;
-    format?: TournamentFormat;
-    roundRobinSettings?: RoundRobinSettings;
 }
 
 /**
@@ -299,7 +302,7 @@ export interface TournamentUpdateMetadata {
     player1: string;
     player2: string;
     winner: string;
-    bracketStage: string;
+    bracketStage: BracketStage;
     round: number;
     isDraw?: boolean;
     drawHandling?: string;
@@ -392,19 +395,21 @@ export interface StyleSetting {
 export interface MatchUpdateModel extends BaseEffectModel {
     mode: 'setWinner' | 'updateStyles' | 'updateSettings' | 'updateStandings' | 'updatePosition' |
     'updateOverlayInstance' | 'toggleVisibility' | 'tournamentStatus' |
-    'resetTournament' | 'undoReset' | 'removeTournament';
-    action?: MatchAction;
+    'resetTournament' | 'undoReset' | 'removeTournament' | 'playerActions';
     matchNumber?: number;
     playerNumber?: number | string;
     drawHandling?: string;
     visibilityAction?: VisibilityAction;
     setting?: SettingUpdate;
-    tournamentStatus?: 'start' | 'stop';
+    tournamentStatus?: TournamentStatus;
     manualTournamentTitle: string;
     tournamentOptions?: {
         displayDuration?: number;
         roundRobinSettings?: RoundRobinSettings;
     };
+    playerAction?: PlayerActionType;
+    playerName?: string;
+    replacementPlayerName?: string;
 }
 
 /**
@@ -412,7 +417,7 @@ export interface MatchUpdateModel extends BaseEffectModel {
  */
 export interface BackupEffectModel {
     mode?: string;
-    tournamentSelectionMode: string;
+    tournamentSelectionMode: TournamentSelectionMode;
     manualTournamentTitle: string;
     action: BackupAction;
 }
@@ -426,23 +431,4 @@ export interface ResetTournamentOptions {
  */
 export interface EffectModel extends BaseTournamentConfig {
     tournamentOptions: TournamentOptionsConfig;
-}
-
-/**
- * Event-related data structures
- */
-export interface EventData {
-    uuid: string;
-    config: TournamentConfig;
-    paused?: boolean;
-    overlayInstance: string | null;
-}
-
-/**
- * Tournament title information
- */
-export interface TournamentTitleInfo {
-    tournamentId: string;
-    displayTitle: string;
-    status: 'active' | 'ended';
 }

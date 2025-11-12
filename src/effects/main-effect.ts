@@ -1,5 +1,5 @@
 import { Firebot } from "@crowbartools/firebot-custom-scripts-types";
-import { TournamentState, Player, EffectModel, TournamentFormat, TournamentSettings } from "../types/types";
+import { TournamentState, EffectModel, TournamentSettings } from "../types/types";
 import { tournamentManager } from "../utility/tournament-manager";
 import mainTemplate from "../templates/main-template.html";
 import { logger } from "../logger";
@@ -148,17 +148,24 @@ function getRandomPresetLocation(): string {
 }
 
 /**
- * Shuffle an array using Fisher-Yates algorithm
+ * Checks if a tournament has generated any matches yet
  */
-function shuffle<T>(array: T[]): T[] {
-    const result = [...array];
-    for (let i = result.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [result[i], result[j]] = [result[j], result[i]];
+function hasGeneratedMatches(state?: TournamentState | null): boolean {
+    if (!state?.tournamentData) {
+        return false;
     }
-    return result;
+
+    const { tournamentData } = state;
+    return (
+        (tournamentData.matchCounter ?? 0) > 0 ||
+        (tournamentData.currentMatches?.length ?? 0) > 0 ||
+        (tournamentData.completedMatches?.length ?? 0) > 0
+    );
 }
 
+/**
+ * Shuffle an array using Fisher-Yates algorithm
+ */
 /**
  * Defines and exports the tournament system effect type for Firebot
  */
@@ -287,10 +294,7 @@ export function tournamentSystemEffectType() {
 
 
             const DEFAULT_TOURNAMENT_OPTIONS = {
-                playersList: [],
-                resetOnLoad: false,
-                useTextArea: false,
-                textAreaInput: ""
+                resetOnLoad: false
             };
 
             const POSITIONS = [
@@ -325,32 +329,10 @@ export function tournamentSystemEffectType() {
 
                 $scope.effect.tournamentOptions = {
                     ...DEFAULT_TOURNAMENT_OPTIONS,
-                    ...($scope.effect.tournamentOptions || {}),
-                    playersList: $scope.effect.tournamentOptions?.playersList || [],
-                    format: $scope.effect.settings?.format || DEFAULT_SETTINGS.format,
-                    roundRobinSettings: {
-                        ...DEFAULT_SETTINGS.roundRobinSettings,
-                        ...($scope.effect.tournamentOptions?.roundRobinSettings || {})
-                    }
+                    ...($scope.effect.tournamentOptions || {})
                 };
 
                 $scope.positions = POSITIONS;
-            }
-
-            /**
-             * Adds a new player to the tournament
-             */
-            function addPlayer() {
-                const playersList = $scope.effect.tournamentOptions.playersList;
-                playersList.push("");
-            }
-
-            /**
-             * Removes a player from the tournament
-             */
-            function removePlayer(index: number) {
-                const playersList = $scope.effect.tournamentOptions.playersList;
-                playersList.splice(index, 1);
             }
 
             /**
@@ -388,22 +370,6 @@ export function tournamentSystemEffectType() {
                             };
                         }
 
-                        if (tournamentData.tournamentData.players) {
-                            $scope.effect.tournamentOptions.playersList = tournamentData.tournamentData.players.map((p: Player) => p.name);
-                        }
-
-                        if (tournamentData.tournamentData.settings?.format) {
-                            $scope.effect.tournamentOptions.format = tournamentData.tournamentData.settings.format;
-                        }
-
-                        if (tournamentData.tournamentData.settings?.format === 'round-robin' &&
-                            tournamentData.tournamentData.settings?.roundRobinSettings) {
-
-                            $scope.effect.tournamentOptions.roundRobinSettings = {
-                                ...DEFAULT_SETTINGS.roundRobinSettings,
-                                ...tournamentData.tournamentData.settings.roundRobinSettings
-                            };
-                        }
                     })
                     .catch((error: Error) => {
                         console.error('Error loading tournament data:', error);
@@ -500,14 +466,6 @@ export function tournamentSystemEffectType() {
                 }
             });
 
-            $scope.$watch('effect.tournamentOptions.format', (newVal: TournamentFormat) => {
-                if (newVal) {
-                    $scope.effect.settings.format = newVal;
-                }
-            });
-
-            $scope.addPlayer = addPlayer;
-            $scope.removePlayer = removePlayer;
             $scope.showOverlayInfoModal = (overlayInstance: any) => {
                 utilityService.showOverlayInfoModal(overlayInstance);
             };
@@ -520,23 +478,6 @@ export function tournamentSystemEffectType() {
             const errors = [];
             if (effect.tournamentTitle == null || effect.tournamentTitle === "") {
                 errors.push("Please provide a tournament title");
-            }
-
-            let playersList = effect.tournamentOptions.playersList;
-            if (effect.tournamentOptions.useTextArea) {
-                const input = effect.tournamentOptions.textAreaInput;
-                if (input) {
-                    playersList = input.split('\n')
-                        .filter((line: string) => line.trim())
-                        .map((line: string) => line.trim());
-                }
-            }
-
-            const format = effect.settings.format;
-            const minPlayers = format === 'round-robin' ? 2 : 3;
-
-            if (!playersList || playersList.length < minPlayers) {
-                errors.push(`Please provide at least ${minPlayers} players for ${format} tournament`);
             }
 
             if (effect.settings && effect.settings.maxVisibleMatches) {
@@ -563,17 +504,6 @@ export function tournamentSystemEffectType() {
             const sanitizedTitle = event.effect.tournamentTitle.replace(/[^a-zA-Z0-9]/g, '_');
             const tournamentId = `tournament_${sanitizedTitle}`;
 
-            let playersList = event.effect.tournamentOptions.playersList;
-
-            if (event.effect.tournamentOptions.useTextArea) {
-                const input = event.effect.tournamentOptions.textAreaInput;
-                if (input) {
-                    playersList = input.split('\n')
-                        .filter((line: string) => line.trim())
-                        .map((line: string) => line.trim());
-                }
-            }
-
             try {
                 if (event.effect.position === 'Random') {
                     event.effect.position = getRandomPresetLocation();
@@ -591,7 +521,6 @@ export function tournamentSystemEffectType() {
                     existingTournament.updatedAt = new Date().toISOString();
 
                     await tournamentManager.updateTournament(tournamentId, existingTournament);
-                    await tournamentManager.startTournament(tournamentId, modules.eventManager);
                     currentTournamentState = existingTournament;
                 } else {
                     if (existingTournament && existingTournament.ended) {
@@ -603,36 +532,16 @@ export function tournamentSystemEffectType() {
                         logger.info(`Creating new tournament ${tournamentId}`);
                     }
 
-                    const players = playersList.map(name => ({
-                        name,
-                        wins: 0,
-                        losses: 0,
-                        eliminated: false,
-                        seed: 0
-                    }));
-
-                    const shuffledPlayers = shuffle([...players]);
-                    shuffledPlayers.forEach((player, index) => player.seed = index + 1);
-
                     const format = event.effect.settings.format;
-
-                    let winnersPlayers = [...shuffledPlayers];
-                    let losersPlayers: Player[] = [];
-                    let bracketStage: 'winners' | 'losers' | 'final' | 'round-robin' = 'winners';
-
-                    if (format === 'round-robin') {
-                        winnersPlayers = [];
-                        bracketStage = 'round-robin';
-                    } else if (format === 'single-elimination') {
-                        losersPlayers = [];
-                    }
+                    const bracketStage: 'winners' | 'losers' | 'final' | 'round-robin' =
+                        format === 'round-robin' ? 'round-robin' : 'winners';
 
                     currentTournamentState = {
                         uuid: randomUUID(),
                         tournamentData: {
-                            players: shuffledPlayers,
-                            winnersPlayers,
-                            losersPlayers,
+                            players: [],
+                            winnersPlayers: [],
+                            losersPlayers: [],
                             eliminatedPlayers: [],
                             currentMatches: [],
                             completedMatches: [],
@@ -643,7 +552,7 @@ export function tournamentSystemEffectType() {
                             winner: null,
                             requireTrueFinal: false,
                             trueFinalPlayed: false,
-                            initialPlayerCount: shuffledPlayers.length,
+                            initialPlayerCount: 0,
                             title: event.effect.tournamentTitle,
                             settings: event.effect.settings,
                             styles: event.effect.styles,
@@ -659,36 +568,43 @@ export function tournamentSystemEffectType() {
                     };
 
                     await tournamentManager.createTournament(tournamentId, currentTournamentState);
-                    await tournamentManager.createInitialMatches(tournamentId);
+
+                    logger.info(`Tournament ${tournamentId} created without players. Use the updater's Player Actions to build the roster before starting.`);
 
                     const updatedTournament = await tournamentManager.getTournament(tournamentId);
                     if (updatedTournament) {
                         currentTournamentState = updatedTournament;
                     }
-
-                    await tournamentManager.startTournament(tournamentId, modules.eventManager);
                 }
 
-                const overlayConfig = buildTournamentOverlayConfig(
-                    tournamentId,
-                    currentTournamentState,
-                    event.effect.tournamentTitle
-                );
-                const data = {
-                    uuid: currentTournamentState.uuid,
-                    overlayInstance: event.effect.overlayInstance,
-                    config: overlayConfig
-                };
+                const shouldBroadcastOverlay = hasGeneratedMatches(currentTournamentState);
 
-                if (settings.useOverlayInstances()) {
-                    if (event.effect.overlayInstance != null) {
-                        if (settings.getOverlayInstances().includes(event.effect.overlayInstance)) {
-                            data.overlayInstance = event.effect.overlayInstance;
+                if (shouldBroadcastOverlay) {
+                    const overlayConfig = buildTournamentOverlayConfig(
+                        tournamentId,
+                        currentTournamentState,
+                        event.effect.tournamentTitle
+                    );
+                    const data = {
+                        uuid: currentTournamentState.uuid,
+                        overlayInstance: event.effect.overlayInstance,
+                        config: overlayConfig
+                    };
+
+                    if (settings.useOverlayInstances()) {
+                        if (event.effect.overlayInstance != null) {
+                            if (settings.getOverlayInstances().includes(event.effect.overlayInstance)) {
+                                data.overlayInstance = event.effect.overlayInstance;
+                            }
                         }
                     }
-                }
 
-                await webServer.sendToOverlay("tournament-system", data);
+                    await webServer.sendToOverlay("tournament-system", data);
+                } else {
+                    logger.info(
+                        `Tournament ${tournamentId} created/updated without matches; overlay update deferred until the updater starts the bracket.`
+                    );
+                }
 
                 return { success: true };
             }
