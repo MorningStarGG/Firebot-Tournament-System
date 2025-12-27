@@ -102,11 +102,7 @@ export const emitTournamentEnd = async (
         await eventManager.triggerEvent(
             TOURNAMENT_SYSTEM_SOURCE_ID,
             TOURNAMENT_END_EVENT,
-            eventData,
-            {
-                isRepeatable: true,
-                skipCache: true
-            }
+            eventData
         );
 
         logger.info('Tournament end event emission completed successfully');

@@ -67,6 +67,15 @@ export function buildTournamentOverlayConfig(
 ) {
     const preparedSettings = prepareWinnerDisplaySettings(state.tournamentData?.settings);
 
+    if (preparedSettings) {
+        const visibilityMode = preparedSettings.visibilityMode || 'showAll';
+        const showStandings =
+            visibilityMode === 'hideAll' || visibilityMode === 'showTournamentOnly' ? false : true;
+
+        preparedSettings.visibilityMode = visibilityMode;
+        preparedSettings.showStandings = showStandings;
+    }
+
     const tournamentData = state.tournamentData
         ? {
               ...state.tournamentData,
@@ -79,6 +88,7 @@ export function buildTournamentOverlayConfig(
         tournamentData,
         styles: state.tournamentData?.styles,
         settings: preparedSettings,
+        visibilityMode: preparedSettings?.visibilityMode,
         position: state.position,
         customCoords: state.customCoords,
     };

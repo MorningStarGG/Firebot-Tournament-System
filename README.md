@@ -94,6 +94,13 @@ A comprehensive and feature-rich tournament management system for Firebot, desig
   - Colored stat badges option
 
 ### Display Options
+- Overlay visibility modes:
+  - Show Tournament & Standings
+  - Show Tournament Only
+  - Show Standings Only
+  - Refresh (reapply the last saved visibility without changing it)
+  - Hide All
+- Standings display controls apply only when standings are visible (split/inline, two-line layout)
 - Toggle seed number visibility
 - Toggle bracket name display
 - Toggle match animations
@@ -102,7 +109,6 @@ A comprehensive and feature-rich tournament management system for Firebot, desig
   - SVG Trophy icon (default included)
   - Custom image (URL or local file)
 - Toggle wins/losses/record display
-- Toggle Round-Robin standings
 - Max visible matches (1-5)
 - Max visible standings (1-10)
 - Custom bracket names:
@@ -114,7 +120,8 @@ A comprehensive and feature-rich tournament management system for Firebot, desig
 
 ### Round-Robin Standings
 - Real-time point calculations
-- Standings display options:
+- Standings visibility controlled by overlay visibility modes (show/hide tournament/standings)
+- Standings display options when visible:
   - Split view (separate from main bracket)
   - Integrated view
 - Two-line layout for standings
@@ -398,10 +405,15 @@ Use the **"Tournament System Updater"** effect for:
    - Replace/rename a player to fix typos
 
 5. **Tournament Controls:**
-   - Show/hide tournament
-   - Reset tournament (with 30s undo)
-   - Start/stop tournament
-   - Remove tournament
+- Overlay visibility modes:
+  - Show Tournament & Standings
+  - Show Tournament Only
+  - Show Standings Only
+  - Hide All
+  - Last Setting (reapply saved visibility)
+- Reset tournament (with 30s undo)
+- Start/stop tournament
+- Remove tournament
 
 ### Managing Backups
 
@@ -525,7 +537,7 @@ The compiled script will be in the `dist` folder.
 
 ### Requirements
 
-- **Firebot** 5.64.0 or higher
+- **Firebot** 5.65.3 or higher
 
 ### Support
 

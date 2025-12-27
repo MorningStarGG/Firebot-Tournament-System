@@ -48,7 +48,8 @@ let currentTournamentState: TournamentState = {
                 singleEliminationTitle: 'Tournament Bracket',
                 finalsTitle: 'Finals'
             },
-            showStandings: false,
+            visibilityMode: 'showAll',
+            showStandings: true,
             splitStandings: false,
             standingsTwoLineLayout: false,
             maxVisibleStandings: 5,
@@ -270,12 +271,13 @@ export function tournamentSystemEffectType() {
                     losersTitle: 'Losers Bracket',
                     losersShortTitle: 'Losers',
                     singleEliminationTitle: 'Tournament Bracket',
-                    finalsTitle: 'Finals'
-                },
-                useManualShortNames: false,
-                showStandings: false,
-                splitStandings: false,
-                standingsTwoLineLayout: false,
+                finalsTitle: 'Finals'
+            },
+            useManualShortNames: false,
+            visibilityMode: 'showAll',
+            showStandings: true,
+            splitStandings: false,
+            standingsTwoLineLayout: false,
                 maxVisibleStandings: 5,
                 standingsPosition: 'Middle Right',
                 standingsCustomCoords: {
@@ -305,6 +307,17 @@ export function tournamentSystemEffectType() {
                 'Custom'
             ];
 
+            function normalizeVisibilitySettings(settings: TournamentSettings): TournamentSettings {
+                const visibilityMode = settings.visibilityMode ?? (settings.showStandings ? 'showAll' : 'showTournamentOnly');
+                const showStandings = visibilityMode === 'hideAll' || visibilityMode === 'showTournamentOnly' ? false : true;
+
+                return {
+                    ...settings,
+                    visibilityMode,
+                    showStandings
+                };
+            }
+
             /**
              * Initializes default values for the tournament configuration
              */
@@ -326,6 +339,7 @@ export function tournamentSystemEffectType() {
                         ...($scope.effect.settings?.standingsCustomCoords || {})
                     }
                 };
+                $scope.effect.settings = normalizeVisibilitySettings($scope.effect.settings);
 
                 $scope.effect.tournamentOptions = {
                     ...DEFAULT_TOURNAMENT_OPTIONS,
@@ -368,6 +382,7 @@ export function tournamentSystemEffectType() {
                                     ...tournamentData.tournamentData.settings.standingsCustomCoords
                                 }
                             };
+                            $scope.effect.settings = normalizeVisibilitySettings($scope.effect.settings);
                         }
 
                     })
@@ -627,13 +642,112 @@ export function tournamentSystemEffectType() {
                 name: "tournament-system",
                 onOverlayEvent: (data: unknown) => {
                     const tournamentConfig = data as any;
-                    const sanitizedTitle = tournamentConfig.config.tournamentTitle.replace(/[^a-zA-Z0-9]/g, '_');
+                    const type = tournamentConfig?.type ?? "update";
+                    const visibilityMode = (tournamentConfig?.config?.visibilityMode ||
+                        tournamentConfig?.config?.settings?.visibilityMode) as
+                        | 'showAll'
+                        | 'showTournamentOnly'
+                        | 'showStandingsOnly'
+                        | 'hideAll'
+                        | undefined;
+
+                    if (type === "remove") {
+                        const title = tournamentConfig?.config?.tournamentTitle;
+                        if (!title) return;
+                        const sanitizedRemoveTitle = title.replace(/[^a-zA-Z0-9]/g, '_');
+                        const removeWidgetId = `tournament_${sanitizedRemoveTitle}`;
+                        document
+                            .querySelectorAll(`#${removeWidgetId}`)
+                            .forEach(element => element.remove());
+                        document
+                            .querySelectorAll(`#${removeWidgetId}_standings_split`)
+                            .forEach(element => element.remove());
+                        return;
+                    }
+
+                    if (!tournamentConfig?.config) return;
+
+                    const title = tournamentConfig?.config?.tournamentTitle;
+                    if (!title) return;
+
+                    const sanitizedTitle = title.replace(/[^a-zA-Z0-9]/g, '_');
                     const widgetId = `tournament_${sanitizedTitle}`;
+                    const standingsId = `${widgetId}_standings_split`;
+
+                    const showTournament = (() => {
+                        switch (visibilityMode) {
+                            case 'showTournamentOnly':
+                                return true;
+                            case 'showStandingsOnly':
+                                return false;
+                            case 'showAll':
+                                return true;
+                            case 'hideAll':
+                                return false;
+                            default:
+                                return type !== "hide";
+                        }
+                    })();
+
+                    const showStandings = (() => {
+                        switch (visibilityMode) {
+                            case 'showTournamentOnly':
+                                return false;
+                            case 'showStandingsOnly':
+                                return true;
+                            case 'showAll':
+                                return true;
+                            case 'hideAll':
+                                return false;
+                            default:
+                                return type !== "hide";
+                        }
+                    })();
+
+                    const tournamentWrapperExisting = document.getElementById(widgetId);
+                    const standingsExisting = document.getElementById(standingsId);
+                    const hasSplitStandings = !!standingsExisting;
+                    const shouldShowWrapper = showTournament || (showStandings && !hasSplitStandings);
+
                     const positionClass = tournamentConfig.config.position.toLowerCase().replace(' ', '-');
                     const { customCoords } = tournamentConfig.config;
 
-                    let tournamentWrapper = document.getElementById(widgetId);
+                    const applyVisibilityToWrapper = (wrapper: HTMLElement | null) => {
+                        if (!wrapper) return;
+                        wrapper.style.display = shouldShowWrapper ? '' : 'none';
+
+                        const matchesEl = wrapper.querySelector('#active-matches') as HTMLElement | null;
+                        if (matchesEl) matchesEl.style.display = showTournament ? '' : 'none';
+
+                        const remainingEl = wrapper.querySelector('#remaining-matches') as HTMLElement | null;
+                        if (remainingEl) remainingEl.style.display = showTournament ? '' : 'none';
+
+                        const statusEl = wrapper.querySelector('#tournament-status') as HTMLElement | null;
+                        if (statusEl) statusEl.style.display = showTournament ? '' : 'none';
+
+                        const inlineStandingsEl = wrapper.querySelector('#standings-container') as HTMLElement | null;
+                        if (inlineStandingsEl) inlineStandingsEl.style.display = showStandings && !hasSplitStandings ? '' : 'none';
+                    };
+
+                    if (type === "hide" || type === "show") {
+                        applyVisibilityToWrapper(tournamentWrapperExisting as HTMLElement | null);
+                        if (standingsExisting) {
+                            (standingsExisting as HTMLElement).style.display =
+                                showStandings ? "" : "none";
+                        }
+                        if (type === "hide") {
+                            return;
+                        }
+                    }
+
+                    let tournamentWrapper = tournamentWrapperExisting;
                     if (tournamentWrapper) {
+                        applyVisibilityToWrapper(tournamentWrapper as HTMLElement);
+                        const split = standingsExisting;
+                        if (split) {
+                            split.style.display = showStandings ? '' : 'none';
+                        }
+
                         tournamentWrapper.className = `position-wrapper ${positionClass}`;
 
                         const innerPosition = tournamentWrapper.querySelector('.inner-position') as HTMLElement;
@@ -686,6 +800,7 @@ export function tournamentSystemEffectType() {
                             const wrapper = document.createElement('div');
                             wrapper.id = widgetId;
                             wrapper.className = `position-wrapper ${positionClass}`;
+                            wrapper.style.display = shouldShowWrapper ? '' : 'none';
 
                             let innerHtml = `<div class="inner-position tournamentOverlay"`;
 
@@ -711,6 +826,15 @@ export function tournamentSystemEffectType() {
 
                             wrapper.innerHTML = innerHtml;
                             $("#wrapper").append(wrapper);
+
+                            applyVisibilityToWrapper(wrapper);
+
+                            setTimeout(() => {
+                                const split = document.getElementById(standingsId);
+                                if (split) {
+                                    (split as HTMLElement).style.display = showStandings ? '' : 'none';
+                                }
+                            }, 0);
 
                             setTimeout(() => {
                                 const script = document.createElement('script');

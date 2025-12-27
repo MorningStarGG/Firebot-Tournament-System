@@ -34,7 +34,7 @@ export const tournamentStatusVariable: ReplaceVariable = {
         examples: [
             {
                 usage: "tournamentStatus[example]",
-                description: "Gets current status of tournament (manually_stopped, completed_with_winner, ended, paused, active)"
+                description: "Gets current status of tournament (not_found, manually_stopped, completed_with_winner, ended, paused, active)"
             },
             {
                 usage: "tournamentStatus[example, backups]",

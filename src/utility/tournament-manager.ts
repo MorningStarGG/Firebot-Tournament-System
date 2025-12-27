@@ -330,12 +330,15 @@ class TournamentManager {
 
         if (isManualStop) {
             logger.info(`Manual stop - removing tournament immediately`);
-            await webServer.sendToOverlay("tournament-updater", {
-                type: 'remove',
+            const removePayload = {
+                type: 'remove' as const,
+                overlayInstance: tournament.overlayInstance,
                 config: {
                     tournamentTitle: tournamentId.replace('tournament_', '')
                 }
-            });
+            };
+            await webServer.sendToOverlay("tournament-updater", removePayload);
+            await webServer.sendToOverlay("tournament-system", removePayload);
             return;
         }
 
@@ -353,24 +356,30 @@ class TournamentManager {
 
             setTimeout(async () => {
                 try {
-                    await webServer.sendToOverlay("tournament-updater", {
-                        type: 'remove',
+                    const delayedRemovePayload = {
+                        type: 'remove' as const,
+                        overlayInstance: tournament.overlayInstance,
                         config: {
                             tournamentTitle: tournamentId.replace('tournament_', '')
                         }
-                    });
+                    };
+                    await webServer.sendToOverlay("tournament-updater", delayedRemovePayload);
+                    await webServer.sendToOverlay("tournament-system", delayedRemovePayload);
                 } catch (error) {
                     console.error('Error removing tournament from overlay:', error);
                 }
             }, (tournament.tournamentData.settings.displayDuration || 30) * 1000);
         } else {
             logger.info(`No winner - removing tournament immediately`);
-            await webServer.sendToOverlay("tournament-updater", {
-                type: 'remove',
+            const immediateRemovePayload = {
+                type: 'remove' as const,
+                overlayInstance: tournament.overlayInstance,
                 config: {
                     tournamentTitle: tournamentId.replace('tournament_', '')
                 }
-            });
+            };
+            await webServer.sendToOverlay("tournament-updater", immediateRemovePayload);
+            await webServer.sendToOverlay("tournament-system", immediateRemovePayload);
         }
     }
 

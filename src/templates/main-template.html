@@ -133,7 +133,7 @@
     </div>
 
     <div class="setting-group">
-        <h5>Basic Display Options</h5>
+        <h4>Display Options</h4>
         <div class="controls-fb-inline">
             <label class="control-fb control--checkbox" aria-label="Toggle bracket information display">Show bracket
                 info
@@ -148,12 +148,56 @@
                 <input type="checkbox" ng-model="effect.settings.showWinnerDisplay">
                 <div class="control__indicator"></div>
             </label>
+            <label class="control-fb control--checkbox" aria-label="Toggle two-line layout">Use two-line layout
+                <input type="checkbox" ng-model="effect.settings.twoLineLayout">
+                <div class="control__indicator"></div>
+            </label>
+            <label class="control-fb control--checkbox" aria-label="Toggle modern stat badges">Use colored stat badges
+                <input type="checkbox" ng-model="effect.settings.coloredStatBadges">
+                <div class="control__indicator"></div>
+            </label>
+            <label class="control-fb control--checkbox" aria-label="Toggle seed number visibility">Show seed numbers
+                <input type="checkbox" ng-model="effect.settings.showSeed">
+                <div class="control__indicator"></div>
+            </label>
+            <label class="control-fb control--checkbox" aria-label="Toggle wins display">Show wins
+                <input type="checkbox" ng-model="effect.settings.showWins">
+                <div class="control__indicator"></div>
+            </label>
+            <label class="control-fb control--checkbox" aria-label="Toggle losses display">Show losses
+                <input type="checkbox" ng-model="effect.settings.showLosses">
+                <div class="control__indicator"></div>
+            </label>
+            <label class="control-fb control--checkbox" aria-label="Toggle win percentage display">Show win percentage
+                <input type="checkbox" ng-model="effect.settings.showRecord">
+                <div class="control__indicator"></div>
+            </label>
+            <label class="control-fb control--checkbox" aria-label="Split standings to separate position"
+                ng-if="effect.settings.visibilityMode === 'showAll' || effect.settings.visibilityMode === 'showStandingsOnly'">Split
+                Standings Display
+                <input type="checkbox" ng-model="effect.settings.splitStandings">
+                <div class="control__indicator"></div>
+            </label>
+            <label class="control-fb control--checkbox" aria-label="Use two-line layout for standings"
+                ng-if="effect.settings.visibilityMode === 'showAll' || effect.settings.visibilityMode === 'showStandingsOnly'">Standings
+                Two-Line Layout
+                <input type="checkbox" ng-model="effect.settings.standingsTwoLineLayout">
+                <div class="control__indicator"></div>
+            </label>
+        </div>
+        <div class="input-group" style="margin-bottom: 10px;">
+            <span class="input-group-addon">Visibility</span>
+            <select class="form-control" ng-model="effect.settings.visibilityMode">
+                <option value="showAll">Show Tournament & Standings</option>
+                <option value="showTournamentOnly">Show Tournament Only</option>
+                <option value="showStandingsOnly">Show Standings Only</option>
+                <option value="hideAll">Hide All</option>
+            </select>
         </div>
 
         <div class="setting-subgroup" ng-if="effect.settings.showWinnerDisplay">
-            <h6 style="margin-top: 15px;">Winner Graphic</h6>
             <div class="input-group" style="margin-bottom: 10px;">
-                <span class="input-group-addon" id="winnerGraphicTypeLabel">Graphic Type</span>
+                <span class="input-group-addon" id="winnerGraphicTypeLabel">Winner Image</span>
                 <select class="form-control" ng-model="effect.settings.winnerGraphicType"
                     aria-labelledby="winnerGraphicTypeLabel">
                     <option value="trophy">Animated Trophy (default)</option>
@@ -188,219 +232,165 @@
         </div>
     </div>
 
-    <div class="setting-group">
-        <h5>Layout Options</h5>
-        <div class="controls-fb-inline">
-            <label class="control-fb control--checkbox" aria-label="Toggle two-line layout">Use two-line layout
-                <input type="checkbox" ng-model="effect.settings.twoLineLayout">
-                <div class="control__indicator"></div>
-            </label>
-            <label class="control-fb control--checkbox" aria-label="Toggle modern stat badges">Use colored stat badges
-                <input type="checkbox" ng-model="effect.settings.coloredStatBadges">
-                <div class="control__indicator"></div>
-            </label>
-        </div>
-    </div>
-
-    <div class="setting-group">
-        <h5>Player Statistics</h5>
-        <div class="controls-fb-inline">
-            <label class="control-fb control--checkbox" aria-label="Toggle seed number visibility">Show seed numbers
-                <input type="checkbox" ng-model="effect.settings.showSeed">
-                <div class="control__indicator"></div>
-            </label>
-            <label class="control-fb control--checkbox" aria-label="Toggle wins display">Show wins
-                <input type="checkbox" ng-model="effect.settings.showWins">
-                <div class="control__indicator"></div>
-            </label>
-            <label class="control-fb control--checkbox" aria-label="Toggle losses display">Show losses
-                <input type="checkbox" ng-model="effect.settings.showLosses">
-                <div class="control__indicator"></div>
-            </label>
-            <label class="control-fb control--checkbox" aria-label="Toggle win percentage display">Show win percentage
-                <input type="checkbox" ng-model="effect.settings.showRecord">
-                <div class="control__indicator"></div>
-            </label>
-        </div>
-    </div>
-
-    <div class="setting-group">
-        <h5>Standings Display Options</h5>
-        <div class="controls-fb-inline">
-            <label class="control-fb control--checkbox" aria-label="Show tournament standings">Show Standings
-                <input type="checkbox" ng-model="effect.settings.showStandings">
-                <div class="control__indicator"></div>
-            </label>
-            <label class="control-fb control--checkbox" aria-label="Split standings to separate position">Split
-                Standings Display
-                <input type="checkbox" ng-model="effect.settings.splitStandings">
-                <div class="control__indicator"></div>
-            </label>
-            <label class="control-fb control--checkbox" aria-label="Use two-line layout for standings">Standings
-                Two-Line Layout
-                <input type="checkbox" ng-model="effect.settings.standingsTwoLineLayout">
-                <div class="control__indicator"></div>
-            </label>
+    <div ng-if="effect.settings.splitStandings && effect.settings.visibilityMode !== 'hideAll' && effect.settings.visibilityMode !== 'showTournamentOnly'"
+        style="margin-top: 10px;">
+        <h5>Standings Position</h5>
+        <div class="input-group" style="margin-bottom: 10px;">
+            <span class="input-group-addon">Position</span>
+            <select class="form-control" ng-model="effect.settings.standingsPosition">
+                <option value="Top Left">Top Left</option>
+                <option value="Top Middle">Top Middle</option>
+                <option value="Top Right">Top Right</option>
+                <option value="Middle Left">Middle Left</option>
+                <option value="Middle">Middle</option>
+                <option value="Middle Right">Middle Right</option>
+                <option value="Bottom Left">Bottom Left</option>
+                <option value="Bottom Middle">Bottom Middle</option>
+                <option value="Bottom Right">Bottom Right</option>
+                <option value="Custom">Custom</option>
+            </select>
         </div>
 
-        <div ng-if="effect.settings.splitStandings" style="margin-top: 10px;">
-            <h5>Standings Position</h5>
-            <div class="input-group" style="margin-bottom: 10px;">
-                <span class="input-group-addon">Position</span>
-                <select class="form-control" ng-model="effect.settings.standingsPosition">
-                    <option value="Top Left">Top Left</option>
-                    <option value="Top Middle">Top Middle</option>
-                    <option value="Top Right">Top Right</option>
-                    <option value="Middle Left">Middle Left</option>
-                    <option value="Middle">Middle</option>
-                    <option value="Middle Right">Middle Right</option>
-                    <option value="Bottom Left">Bottom Left</option>
-                    <option value="Bottom Middle">Bottom Middle</option>
-                    <option value="Bottom Right">Bottom Right</option>
-                    <option value="Custom">Custom</option>
-                </select>
-            </div>
-
-            <div ng-if="effect.settings.standingsPosition === 'Custom'">
-                <h5>Custom Standings Position</h5>
-                <p style="margin-bottom: 15px;">Set the distance in pixels from the edges of the screen. Leave fields
-                    empty for auto positioning.</p>
-                <div class="row">
-                    <div class="col-md-6">
-                        <firebot-input input-title="Top" type="number" model="effect.settings.standingsCustomCoords.top"
-                            placeholder="Distance from top">
-                        </firebot-input>
-                        <firebot-input input-title="Left" type="number"
-                            model="effect.settings.standingsCustomCoords.left" placeholder="Distance from left">
-                        </firebot-input>
-                    </div>
-                    <div class="col-md-6">
-                        <firebot-input input-title="Bottom" type="number"
-                            model="effect.settings.standingsCustomCoords.bottom" placeholder="Distance from bottom">
-                        </firebot-input>
-                        <firebot-input input-title="Right" type="number"
-                            model="effect.settings.standingsCustomCoords.right" placeholder="Distance from right">
-                        </firebot-input>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div style="margin-top: 15px;">
+        <div ng-if="effect.settings.standingsPosition === 'Custom'">
+            <h5>Custom Standings Position</h5>
+            <p style="margin-bottom: 15px;">Set the distance in pixels from the edges of the screen. Leave fields
+                empty for auto positioning.</p>
             <div class="row">
                 <div class="col-md-6">
-                    <div class="input-group" style="margin-bottom: 10px;">
-                        <color-picker-input model="effect.styles.standingsBgColor" label="BG Color"
-                            aria-label="Select standings background color"></color-picker-input>
-                    </div>
-                    <div class="input-group" style="margin-bottom: 10px;">
-                        <color-picker-input model="effect.styles.standingsPlayerBgColor" label="Name BG"
-                            aria-label="Select standings player name background color"></color-picker-input>
-                    </div>
-                    <div class="input-group" style="margin-bottom: 10px;">
-                        <color-picker-input model="effect.styles.standingsTitleColor" label="Title Text"
-                            aria-label="Select standings title color"></color-picker-input>
-                    </div>
-                    <div class="input-group" style="margin-bottom: 10px;">
-                        <color-picker-input model="effect.styles.standingsPointsColor" label="Points Text"
-                            aria-label="Select standings points color"></color-picker-input>
-                    </div>
+                    <firebot-input input-title="Top" type="number" model="effect.settings.standingsCustomCoords.top"
+                        placeholder="Distance from top">
+                    </firebot-input>
+                    <firebot-input input-title="Left" type="number" model="effect.settings.standingsCustomCoords.left"
+                        placeholder="Distance from left">
+                    </firebot-input>
                 </div>
                 <div class="col-md-6">
-                    <div class="input-group" style="margin-bottom: 10px;">
-                        <color-picker-input model="effect.styles.standingsBorderColor" label="Border Color"
-                            aria-label="Select standings border color"></color-picker-input>
-                    </div>
-                    <div class="input-group" style="margin-bottom: 10px;">
-                        <color-picker-input model="effect.styles.standingsStatsBgColor" label="Stats BG"
-                            aria-label="Select standings stats background color"></color-picker-input>
-                    </div>
-                    <div class="input-group" style="margin-bottom: 10px;">
-                        <color-picker-input model="effect.styles.standingsPlayerNameColor" label="Name Text"
-                            aria-label="Select standings player name color"></color-picker-input>
-                    </div>
-                    <div class="input-group" style="margin-bottom: 10px;">
-                        <color-picker-input model="effect.styles.standingsRecordColor" label="Record Text"
-                            aria-label="Select standings record color"></color-picker-input>
-                    </div>
+                    <firebot-input input-title="Bottom" type="number"
+                        model="effect.settings.standingsCustomCoords.bottom" placeholder="Distance from bottom">
+                    </firebot-input>
+                    <firebot-input input-title="Right" type="number" model="effect.settings.standingsCustomCoords.right"
+                        placeholder="Distance from right">
+                    </firebot-input>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top: 15px;">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="input-group" style="margin-bottom: 10px;">
+                    <color-picker-input model="effect.styles.standingsBgColor" label="BG Color"
+                        aria-label="Select standings background color"></color-picker-input>
                 </div>
                 <div class="input-group" style="margin-bottom: 10px;">
-                    <color-picker-input model="effect.styles.standingsStatusColor" label="Status Text"
-                        aria-label="Select standings status color"></color-picker-input>
+                    <color-picker-input model="effect.styles.standingsPlayerBgColor" label="Name BG"
+                        aria-label="Select standings player name background color"></color-picker-input>
                 </div>
+                <div class="input-group" style="margin-bottom: 10px;">
+                    <color-picker-input model="effect.styles.standingsTitleColor" label="Title Text"
+                        aria-label="Select standings title color"></color-picker-input>
+                </div>
+                <div class="input-group" style="margin-bottom: 10px;">
+                    <color-picker-input model="effect.styles.standingsPointsColor" label="Points Text"
+                        aria-label="Select standings points color"></color-picker-input>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="input-group" style="margin-bottom: 10px;">
+                    <color-picker-input model="effect.styles.standingsBorderColor" label="Border Color"
+                        aria-label="Select standings border color"></color-picker-input>
+                </div>
+                <div class="input-group" style="margin-bottom: 10px;">
+                    <color-picker-input model="effect.styles.standingsStatsBgColor" label="Stats BG"
+                        aria-label="Select standings stats background color"></color-picker-input>
+                </div>
+                <div class="input-group" style="margin-bottom: 10px;">
+                    <color-picker-input model="effect.styles.standingsPlayerNameColor" label="Name Text"
+                        aria-label="Select standings player name color"></color-picker-input>
+                </div>
+                <div class="input-group" style="margin-bottom: 10px;">
+                    <color-picker-input model="effect.styles.standingsRecordColor" label="Record Text"
+                        aria-label="Select standings record color"></color-picker-input>
+                </div>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;">
+                <color-picker-input model="effect.styles.standingsStatusColor" label="Status Text"
+                    aria-label="Select standings status color"></color-picker-input>
+            </div>
 
-                <div class="setting-group">
-                    <h6>Top 5 Ranks</h6>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="input-group" style="margin-bottom: 10px;">
-                                <color-picker-input model="effect.styles.standingRank1BgColor" label="Rank 1 BG"
-                                    aria-label="Select rank 1 background color"></color-picker-input>
-                            </div>
-                            <div class="input-group" style="margin-bottom: 10px;">
-                                <color-picker-input model="effect.styles.standingRank2BgColor" label="Rank 2 BG"
-                                    aria-label="Select rank 2 background color"></color-picker-input>
-                            </div>
-                            <div class="input-group" style="margin-bottom: 10px;">
-                                <color-picker-input model="effect.styles.standingRank3BgColor" label="Rank 3 BG"
-                                    aria-label="Select rank 3 background color"></color-picker-input>
-                            </div>
-                            <div class="input-group" style="margin-bottom: 10px;">
-                                <color-picker-input model="effect.styles.standingRank4BgColor" label="Rank 4 BG"
-                                    aria-label="Select rank 4 background color"></color-picker-input>
-                            </div>
-                            <div class="input-group" style="margin-bottom: 10px;">
-                                <color-picker-input model="effect.styles.standingRank5BgColor" label="Rank 5 BG"
-                                    aria-label="Select rank 5 background color"></color-picker-input>
-                            </div>
+            <div class="setting-group">
+                <h6>Top 5 Ranks</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="input-group" style="margin-bottom: 10px;">
+                            <color-picker-input model="effect.styles.standingRank1BgColor" label="Rank 1 BG"
+                                aria-label="Select rank 1 background color"></color-picker-input>
                         </div>
-                        <div class="col-md-6">
-                            <div class="input-group" style="margin-bottom: 10px;">
-                                <color-picker-input model="effect.styles.standingRank1TextColor" label="Rank 1 Text"
-                                    aria-label="Select rank 1 text color"></color-picker-input>
-                            </div>
-                            <div class="input-group" style="margin-bottom: 10px;">
-                                <color-picker-input model="effect.styles.standingRank2TextColor" label="Rank 2 Text"
-                                    aria-label="Select rank 2 text color"></color-picker-input>
-                            </div>
-                            <div class="input-group" style="margin-bottom: 10px;">
-                                <color-picker-input model="effect.styles.standingRank3TextColor" label="Rank 3 Text"
-                                    aria-label="Select rank 3 text color"></color-picker-input>
-                            </div>
-                            <div class="input-group" style="margin-bottom: 10px;">
-                                <color-picker-input model="effect.styles.standingRank4TextColor" label="Rank 4 Text"
-                                    aria-label="Select rank 4 text color"></color-picker-input>
-                            </div>
-                            <div class="input-group" style="margin-bottom: 10px;">
-                                <color-picker-input model="effect.styles.standingRank5TextColor" label="Rank 5 Text"
-                                    aria-label="Select rank 5 text color"></color-picker-input>
-                            </div>
+                        <div class="input-group" style="margin-bottom: 10px;">
+                            <color-picker-input model="effect.styles.standingRank2BgColor" label="Rank 2 BG"
+                                aria-label="Select rank 2 background color"></color-picker-input>
+                        </div>
+                        <div class="input-group" style="margin-bottom: 10px;">
+                            <color-picker-input model="effect.styles.standingRank3BgColor" label="Rank 3 BG"
+                                aria-label="Select rank 3 background color"></color-picker-input>
+                        </div>
+                        <div class="input-group" style="margin-bottom: 10px;">
+                            <color-picker-input model="effect.styles.standingRank4BgColor" label="Rank 4 BG"
+                                aria-label="Select rank 4 background color"></color-picker-input>
+                        </div>
+                        <div class="input-group" style="margin-bottom: 10px;">
+                            <color-picker-input model="effect.styles.standingRank5BgColor" label="Rank 5 BG"
+                                aria-label="Select rank 5 background color"></color-picker-input>
                         </div>
                     </div>
-                </div>
-
-                <div class="setting-group">
-                    <h6>Other Ranks (6+)</h6>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="input-group" style="margin-bottom: 10px;">
-                                <color-picker-input model="effect.styles.standingRankOthersBgColor" label="Others BG"
-                                    aria-label="Select other ranks background color"></color-picker-input>
-                            </div>
+                    <div class="col-md-6">
+                        <div class="input-group" style="margin-bottom: 10px;">
+                            <color-picker-input model="effect.styles.standingRank1TextColor" label="Rank 1 Text"
+                                aria-label="Select rank 1 text color"></color-picker-input>
                         </div>
-                        <div class="col-md-6">
-                            <div class="input-group" style="margin-bottom: 10px;">
-                                <color-picker-input model="effect.styles.standingRankOthersTextColor"
-                                    label="Others Text" aria-label="Select other ranks text color"></color-picker-input>
-                            </div>
+                        <div class="input-group" style="margin-bottom: 10px;">
+                            <color-picker-input model="effect.styles.standingRank2TextColor" label="Rank 2 Text"
+                                aria-label="Select rank 2 text color"></color-picker-input>
+                        </div>
+                        <div class="input-group" style="margin-bottom: 10px;">
+                            <color-picker-input model="effect.styles.standingRank3TextColor" label="Rank 3 Text"
+                                aria-label="Select rank 3 text color"></color-picker-input>
+                        </div>
+                        <div class="input-group" style="margin-bottom: 10px;">
+                            <color-picker-input model="effect.styles.standingRank4TextColor" label="Rank 4 Text"
+                                aria-label="Select rank 4 text color"></color-picker-input>
+                        </div>
+                        <div class="input-group" style="margin-bottom: 10px;">
+                            <color-picker-input model="effect.styles.standingRank5TextColor" label="Rank 5 Text"
+                                aria-label="Select rank 5 text color"></color-picker-input>
                         </div>
                     </div>
                 </div>
             </div>
-            <firebot-input input-title="Max Visible Standings" type="number" model="effect.settings.maxVisibleStandings"
-                placeholder="5" min="1" max="10" aria-label="Set maximum number of standings to display (1-10)">
-            </firebot-input>
+
+            <div class="setting-group">
+                <h6>Other Ranks (6+)</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="input-group" style="margin-bottom: 10px;">
+                            <color-picker-input model="effect.styles.standingRankOthersBgColor" label="Others BG"
+                                aria-label="Select other ranks background color"></color-picker-input>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="input-group" style="margin-bottom: 10px;">
+                            <color-picker-input model="effect.styles.standingRankOthersTextColor" label="Others Text"
+                                aria-label="Select other ranks text color"></color-picker-input>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+        <firebot-input input-title="Max Visible Standings" type="number" model="effect.settings.maxVisibleStandings"
+            placeholder="5" min="1" max="10" aria-label="Set maximum number of standings to display (1-10)">
+        </firebot-input>
+    </div>
 </eos-container>
 
 <!-- Tournament Style Settings Section -->

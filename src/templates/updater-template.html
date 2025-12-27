@@ -36,11 +36,11 @@
             <option value="setWinner">Set Match Winner</option>
             <option value="playerActions">Player Actions</option>
             <option value="updateStyles">Update Styles/Colors</option>
+            <option value="toggleVisibility">Tournament & Standings Visibility</option>
             <option value="updateSettings">Update Tournament Settings</option>
             <option value="updateStandings">Update Standings Settings</option>
             <option value="updatePosition">Update Tournament Display Position</option>
             <option value="updateOverlayInstance">Update Tournament Overlay Instance</option>
-            <option value="toggleVisibility">Hide/Show Tournament</option>
             <option value="tournamentStatus">End/Start Tournament</option>
             <option value="resetTournament">Reset Tournament</option>
             <option value="undoReset" ng-if="effect.tournamentSelectionMode === 'manual'">Undo Reset</option>
@@ -322,6 +322,21 @@
     </div>
 </eos-container>
 
+<!-- Tournament Visibility -->
+<eos-container ng-if="effect.mode === 'toggleVisibility'" header="Tournament & Standings Visibility" pad-top="true"
+    aria-label="Tournament visibility controls">
+    <div class="input-group">
+        <span class="input-group-addon" id="visibilityActionLabel">Visibility</span>
+        <select class="form-control" ng-model="effect.visibilityAction" aria-labelledby="visibilityActionLabel">
+            <option value="showAll">Show Tournament & Standings</option>
+            <option value="showTournamentOnly">Show Tournament Only</option>
+            <option value="showStandingsOnly">Show Standings Only</option>
+            <option value="lastSetting">Refresh Overlay (uses stored settings for tournament)</option>
+            <option value="hideAll">Hide All</option>
+        </select>
+    </div>
+</eos-container>
+
 <!-- Tournament settings -->
 <eos-container ng-if="effect.mode === 'updateSettings'" header="Tournament Settings" pad-top="true"
     aria-label="Tournament settings configuration">
@@ -453,7 +468,7 @@
         <firebot-input input-title="Display Duration After End (seconds)" type="number"
             model="effect.settings.displayDuration"
             aria-label="Set display duration after tournament ends"></firebot-input>
-            
+
         <div class="input-group" style="margin-top: 10px; margin-bottom: 10px;">
             <span class="input-group-addon">Tournament Format</span>
             <select class="form-control" ng-model="effect.settings.format">
@@ -724,10 +739,6 @@
 
     <div ng-if="effect.tournamentSelectionMode === 'tournamentList'" aria-label="List mode standings settings">
         <div class="controls-fb-inline">
-            <label class="control-fb control--checkbox" aria-label="Show tournament standings">Show Standings
-                <input type="checkbox" ng-model="effect.settings.showStandings">
-                <div class="control__indicator"></div>
-            </label>
             <label class="control-fb control--checkbox" aria-label="Split standings to separate position">Split
                 Standings Display
                 <input type="checkbox" ng-model="effect.settings.splitStandings">
@@ -905,7 +916,6 @@
             <span class="input-group-addon" id="standingsSettingLabel">Setting to Update</span>
             <select class="form-control" ng-model="effect.setting.type" ng-change="effectValueChanged()"
                 aria-labelledby="standingsSettingLabel">
-                <option value="showStandings">Show Standings</option>
                 <option value="splitStandings">Split Standings Display</option>
                 <option value="standingsTwoLineLayout">Standings Two-Line Layout</option>
                 <option value="standingsPosition">Standings Position</option>
@@ -934,13 +944,6 @@
         </div>
 
         <div ng-switch="effect.setting.type" aria-label="Setting value input">
-            <div ng-switch-when="showStandings">
-                <label class="control-fb control--checkbox" aria-label="Show tournament standings">Show Standings
-                    <input type="checkbox" ng-model="effect.setting.value">
-                    <div class="control__indicator"></div>
-                </label>
-            </div>
-
             <div ng-switch-when="splitStandings">
                 <label class="control-fb control--checkbox" aria-label="Split standings to separate position">Split
                     Standings Display
@@ -1170,18 +1173,6 @@
             <i class="fas fa-exclamation-triangle"></i>
             Ended tournaments will be cleaned up after 7 days of ending.
         </div>
-    </div>
-</eos-container>
-
-<!-- Tournament Visibility -->
-<eos-container ng-if="effect.mode === 'toggleVisibility'" header="Hide/Show Tournament" pad-top="true"
-    aria-label="Tournament visibility controls">
-    <div class="input-group">
-        <span class="input-group-addon" id="visibilityActionLabel">Hide/Show</span>
-        <select class="form-control" ng-model="effect.visibilityAction" aria-labelledby="visibilityActionLabel">
-            <option value="show">Show Tournament</option>
-            <option value="hide">Hide Tournament</option>
-        </select>
     </div>
 </eos-container>
 

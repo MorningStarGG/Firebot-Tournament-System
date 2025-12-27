@@ -159,7 +159,7 @@ export function tournamentSystemUpdateEffectType() {
                     drawHandling: "replay",
                     pauseAction: "pause",
                     tournamentStatus: "stop",
-                    visibilityAction: "hide",
+                    visibilityAction: "showAll",
                     setting: {
                         type: "backgroundColor",
                         value: "#111111",
@@ -178,13 +178,14 @@ export function tournamentSystemUpdateEffectType() {
                         winnerImageFile: '',
                         showWins: false,
                         showLosses: true,
-                        showRecord: false,
-                        twoLineLayout: false,
-                        coloredStatBadges: false,
-                        maxVisibleMatches: 2,
-                        showStandings: false,
-                        splitStandings: false,
-                        standingsTwoLineLayout: false,
+                    showRecord: false,
+                    twoLineLayout: false,
+                    coloredStatBadges: false,
+                    maxVisibleMatches: 2,
+                    visibilityMode: "showAll",
+                    showStandings: true,
+                    splitStandings: false,
+                    standingsTwoLineLayout: false,
                         maxVisibleStandings: 5,
                         standingsPosition: 'Middle Right',
                         standingsCustomCoords: {
@@ -252,7 +253,8 @@ export function tournamentSystemUpdateEffectType() {
                         twoLineLayout: false,
                         coloredStatBadges: false,
                         maxVisibleMatches: 2,
-                        showStandings: false,
+                        visibilityMode: "showAll",
+                        showStandings: true,
                         splitStandings: false,
                         standingsTwoLineLayout: false,
                         maxVisibleStandings: 5,
@@ -370,7 +372,8 @@ export function tournamentSystemUpdateEffectType() {
                                 twoLineLayout: false,
                                 coloredStatBadges: false,
                                 maxVisibleMatches: 2,
-                                showStandings: false,
+                                visibilityMode: "showAll",
+                                showStandings: true,
                                 splitStandings: false,
                                 standingsTwoLineLayout: false,
                                 maxVisibleStandings: 5,
@@ -383,6 +386,15 @@ export function tournamentSystemUpdateEffectType() {
                                 }
                             };
                         }
+
+                        const visibilityMode =
+                            $scope.effect.settings.visibilityMode ??
+                            ($scope.effect.settings.showStandings ? "showAll" : "showTournamentOnly");
+                        $scope.effect.settings.visibilityMode = visibilityMode;
+                        $scope.effect.settings.showStandings =
+                            visibilityMode === "hideAll" || visibilityMode === "showTournamentOnly"
+                                ? false
+                                : true;
 
                         ensureCustomBracketNameSettingsLocal($scope.effect.settings);
 
@@ -598,7 +610,8 @@ export function tournamentSystemUpdateEffectType() {
                             twoLineLayout: false,
                             coloredStatBadges: false,
                             maxVisibleMatches: 2,
-                            showStandings: false,
+                            visibilityMode: "showAll",
+                            showStandings: true,
                             splitStandings: false,
                             standingsTwoLineLayout: false,
                             maxVisibleStandings: 5,
@@ -617,6 +630,14 @@ export function tournamentSystemUpdateEffectType() {
                             }
                         };
                     }
+                    const visibilityMode =
+                        $scope.effect.settings.visibilityMode ??
+                        ($scope.effect.settings.showStandings ? "showAll" : "showTournamentOnly");
+                    $scope.effect.settings.visibilityMode = visibilityMode;
+                    $scope.effect.settings.showStandings =
+                        visibilityMode === "hideAll" || visibilityMode === "showTournamentOnly"
+                            ? false
+                            : true;
                     ensureCustomBracketNameSettingsLocal($scope.effect.settings);
                 }
 
@@ -624,9 +645,9 @@ export function tournamentSystemUpdateEffectType() {
                     $scope.effect.tournamentStatus = "stop";
                 }
 
-                if ($scope.effect.mode === "toggleVisibility" && !$scope.effect.visibilityAction) {
-                    $scope.effect.visibilityAction = "hide";
-                }
+            if ($scope.effect.mode === "toggleVisibility" && !$scope.effect.visibilityAction) {
+                $scope.effect.visibilityAction = "showAll";
+            }
 
                 if ($scope.effect.tournamentSelectionMode === "tournamentList") {
                     loadActiveTournaments();
@@ -793,15 +814,28 @@ export function tournamentSystemUpdateEffectType() {
                                 const setting = event.effect.setting as SettingUpdate;
 
                                 if (
-                                    setting.type === "showStandings" ||
+                                    setting.type === "visibilityMode" ||
                                     setting.type === "splitStandings" ||
                                     setting.type === "standingsTwoLineLayout" ||
                                     setting.type === "standingsPosition" ||
                                     setting.type === "maxVisibleStandings"
                                 ) {
+                                    const visibilityMode =
+                                        setting.type === "visibilityMode"
+                                            ? (setting.value as VisibilityAction)
+                                            : (tournamentForStandings.tournamentData.settings.visibilityMode || "showAll");
+                                    const showStandings =
+                                        visibilityMode === "hideAll" || visibilityMode === "showTournamentOnly"
+                                            ? false
+                                            : true;
+
                                     tournamentForStandings.tournamentData.settings = {
                                         ...tournamentForStandings.tournamentData.settings,
-                                        [setting.type]: setting.value,
+                                        visibilityMode,
+                                        showStandings,
+                                        ...(setting.type !== "visibilityMode"
+                                            ? { [setting.type]: setting.value }
+                                            : {})
                                     };
                                 }
 
@@ -824,17 +858,27 @@ export function tournamentSystemUpdateEffectType() {
                                     (updatedStyles as any)[setting.type] = setting.value;
                                     tournamentForStandings.tournamentData.styles = updatedStyles;
                                 }
-                            }
-                        } else {
-                            if (event.effect.settings) {
-                                tournamentForStandings.tournamentData.settings = {
-                                    ...tournamentForStandings.tournamentData.settings,
-                                    showStandings: event.effect.settings.showStandings,
-                                    splitStandings: event.effect.settings.splitStandings,
-                                    standingsTwoLineLayout: event.effect.settings.standingsTwoLineLayout,
-                                    maxVisibleStandings: event.effect.settings.maxVisibleStandings,
-                                    standingsPosition: event.effect.settings.standingsPosition,
-                                    standingsCustomCoords: event.effect.settings.standingsCustomCoords,
+                        }
+                    } else {
+                        if (event.effect.settings) {
+                            const visibilityMode =
+                                event.effect.settings.visibilityMode ||
+                                tournamentForStandings.tournamentData.settings.visibilityMode ||
+                                "showAll";
+                            const showStandings =
+                                visibilityMode === "hideAll" || visibilityMode === "showTournamentOnly"
+                                    ? false
+                                    : true;
+
+                            tournamentForStandings.tournamentData.settings = {
+                                ...tournamentForStandings.tournamentData.settings,
+                                visibilityMode,
+                                showStandings,
+                                splitStandings: event.effect.settings.splitStandings,
+                                standingsTwoLineLayout: event.effect.settings.standingsTwoLineLayout,
+                                maxVisibleStandings: event.effect.settings.maxVisibleStandings,
+                                standingsPosition: event.effect.settings.standingsPosition,
+                                standingsCustomCoords: event.effect.settings.standingsCustomCoords,
                                 };
                             }
 
@@ -916,11 +960,7 @@ export function tournamentSystemUpdateEffectType() {
                                     setting.type === "coloredStatBadges" ||
                                     setting.type === "maxVisibleMatches" ||
                                     setting.type === "format" ||
-                                    setting.type === "useManualShortNames" ||
-                                    setting.type === "showStandings" ||
-                                    setting.type === "splitStandings" ||
-                                    setting.type === "standingsTwoLineLayout" ||
-                                    setting.type === "maxVisibleStandings"
+                                    setting.type === "useManualShortNames"
                                 ) {
                                     tournamentToUpdate.tournamentData.settings = {
                                         ...tournamentToUpdate.tournamentData.settings,
@@ -1217,31 +1257,69 @@ export function tournamentSystemUpdateEffectType() {
                             return { success: false };
                         }
 
-                        if (visibilityAction === "hide") {
-                            await webServer.sendToOverlay("tournament-updater", {
-                                type: "hide",
-                                overlayInstance:
-                                    tournamentToToggle.overlayInstance ||
-                                    event.effect.overlayInstance ||
-                                    "",
-                                config: {
-                                    tournamentTitle: tournamentId.replace("tournament_", ""),
-                                },
-                            });
-                        } else {
-                            const overlayConfigToggle = buildTournamentOverlayConfig(
-                                tournamentId,
-                                tournamentToToggle
-                            );
-                            await webServer.sendToOverlay("tournament-updater", {
-                                type: "show",
-                                overlayInstance:
-                                    tournamentToToggle.overlayInstance ||
-                                    event.effect.overlayInstance ||
-                                    "",
-                                config: overlayConfigToggle,
-                            });
+                        const visibilityOverlayInstance =
+                            tournamentToToggle.overlayInstance ||
+                            event.effect.overlayInstance ||
+                            "";
+
+                        const savedMode =
+                            tournamentToToggle.tournamentData.settings.visibilityMode || "showAll";
+                        const visibilityMode =
+                            visibilityAction === "lastSetting" ? savedMode : visibilityAction;
+                        const overlayConfigToggle = buildTournamentOverlayConfig(
+                            tournamentId,
+                            tournamentToToggle
+                        );
+
+                        const payloadConfig = JSON.parse(JSON.stringify(overlayConfigToggle));
+                        const visibilityModeConfig =
+                            visibilityMode || payloadConfig.visibilityMode || "showAll";
+
+                        const showStandings =
+                            visibilityModeConfig === "hideAll" || visibilityModeConfig === "showTournamentOnly"
+                                ? false
+                                : true;
+
+                        if (visibilityAction !== "lastSetting") {
+                            tournamentToToggle.tournamentData.settings = {
+                                ...tournamentToToggle.tournamentData.settings,
+                                visibilityMode: visibilityModeConfig,
+                                showStandings
+                            };
+                            await tournamentManager.updateTournament(tournamentId, tournamentToToggle);
                         }
+
+                        if (payloadConfig.settings) {
+                            payloadConfig.settings.visibilityMode = visibilityModeConfig;
+                            payloadConfig.settings.showStandings = showStandings;
+                        }
+                        if (payloadConfig.tournamentData?.settings) {
+                            payloadConfig.tournamentData.settings.visibilityMode = visibilityModeConfig;
+                            payloadConfig.tournamentData.settings.showStandings = showStandings;
+                        }
+
+                        const visibilityPayload =
+                            visibilityModeConfig === "hideAll"
+                                ? {
+                                      type: "hide",
+                                      overlayInstance: visibilityOverlayInstance,
+                                      config: {
+                                          tournamentTitle: tournamentId.replace("tournament_", ""),
+                                          visibilityMode: visibilityModeConfig
+                                      }
+                                  }
+                                : {
+                                      type: "show",
+                                      overlayInstance: visibilityOverlayInstance,
+                                      config: {
+                                          ...payloadConfig,
+                                          tournamentTitle: tournamentId.replace("tournament_", ""),
+                                          visibilityMode: visibilityModeConfig
+                                      }
+                                  };
+
+                        await webServer.sendToOverlay("tournament-updater", visibilityPayload);
+                        await webServer.sendToOverlay("tournament-system", visibilityPayload);
                         break;
 
                     case "tournamentStatus":
@@ -1272,13 +1350,32 @@ export function tournamentSystemUpdateEffectType() {
                         break;
 
                     case "removeTournament":
+                        const tournamentForRemoval = await tournamentManager.getTournament(
+                            tournamentId
+                        );
                         await tournamentManager.removeTournament(tournamentId);
-                        await webServer.sendToOverlay("tournament-updater", {
+
+                        const overlayInstance =
+                            tournamentForRemoval?.overlayInstance ||
+                            event.effect.overlayInstance ||
+                            "";
+
+                        const removePayload = {
                             type: "remove",
+                            overlayInstance,
                             config: {
                                 tournamentTitle: tournamentId.replace("tournament_", ""),
                             },
-                        });
+                        };
+
+                        await webServer.sendToOverlay(
+                            "tournament-updater",
+                            removePayload
+                        );
+                        await webServer.sendToOverlay(
+                            "tournament-system",
+                            removePayload
+                        );
                         break;
                 }
 
@@ -1450,12 +1547,16 @@ export function tournamentSystemUpdateEffectType() {
 
                         case "hide":
                             executeScript(`
+                                const visibilityMode = ${JSON.stringify(eventData.config.visibilityMode || 'hideAll')};
+                                const showTournament = visibilityMode !== 'showStandingsOnly' && visibilityMode !== 'hideAll' ? true : false;
+                                const showStandings = visibilityMode !== 'showTournamentOnly' && visibilityMode !== 'hideAll' ? true : false;
+
                                 document.querySelectorAll('#${tournamentId}').forEach(wrapper => {
-                                    wrapper.style.display = 'none';
+                                    wrapper.style.display = showTournament ? '' : 'none';
                                 });
                                 
                                 document.querySelectorAll('#${tournamentId}_standings_split').forEach(wrapper => {
-                                    wrapper.style.display = 'none';
+                                    wrapper.style.display = showStandings ? '' : 'none';
                                 });
                             `);
                             break;
@@ -1463,6 +1564,10 @@ export function tournamentSystemUpdateEffectType() {
                         case "show":
                             executeScript(`
                                 (function() {
+                                    const visibilityMode = ${JSON.stringify(eventData.config.visibilityMode || 'showAll')};
+                                    const showTournament = visibilityMode === 'showStandingsOnly' ? false : true;
+                                    const showStandings = visibilityMode === 'showTournamentOnly' ? false : true;
+
                                     const tournamentId = 'tournament_${eventData.config.tournamentTitle.replace(
                                 /[^a-zA-Z0-9]/g,
                                 "_"
@@ -1470,11 +1575,11 @@ export function tournamentSystemUpdateEffectType() {
                                     const existingWrapper = document.getElementById(tournamentId);
                                     const splitStandings = document.getElementById(tournamentId + '_standings_split');
                                     if (splitStandings) {
-                                        splitStandings.style.display = '';
+                                        splitStandings.style.display = showStandings ? '' : 'none';
                                     }
                                     
                                     if (existingWrapper) {
-                                        existingWrapper.style.display = '';
+                                        existingWrapper.style.display = showTournament ? '' : 'none';
                                         
                                         if (${JSON.stringify(eventData.config.position)}) {
                                             const position = ${JSON.stringify(eventData.config.position)};

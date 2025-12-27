@@ -22,7 +22,14 @@ export type BracketStage = 'winners' | 'losers' | 'final' | 'round-robin';
  */
 export type TournamentStatus = 'start' | 'stop';
 
-export type VisibilityAction = 'show' | 'hide';
+export type OverlayVisibilityMode =
+    | 'showAll'
+    | 'showTournamentOnly'
+    | 'showStandingsOnly'
+    | 'hideAll'
+    | 'lastSetting';
+
+export type VisibilityAction = OverlayVisibilityMode;
 export type BackupAction = 'restore' | 'remove';
 export type PlayerActionType = 'add' | 'remove' | 'replace';
 
@@ -140,6 +147,7 @@ export interface TournamentSettings {
     maxVisibleStandings: number;
     standingsPosition: string;
     standingsCustomCoords: CustomCoords;
+    visibilityMode?: OverlayVisibilityMode;
     roundRobinSettings: RoundRobinSettings;
 }
 
@@ -342,7 +350,7 @@ export type SettingUpdate = BooleanSetting | StyleSetting | NumericSetting | Str
 export interface BooleanSetting {
     type: 'showSeed' | 'showBracket' | 'animateMatches' | 'showWinnerDisplay' |
     'showWins' | 'showLosses' | 'showRecord' | 'twoLineLayout' | 'coloredStatBadges' |
-    'showStandings' | 'splitStandings' | 'standingsTwoLineLayout' | 'allowDraws' |
+    'splitStandings' | 'standingsTwoLineLayout' | 'allowDraws' |
     'useManualShortNames';
     value: boolean;
 }
@@ -362,7 +370,8 @@ export interface NumericSetting {
 export interface StringSetting {
     type: 'standingsPosition' | 'format' | 'winnersTitle' | 'losersTitle' |
     'singleEliminationTitle' | 'finalsTitle' | 'winnersShortTitle' | 'losersShortTitle' |
-    'winnerGraphicType' | 'winnerImageMode' | 'winnerImageUrl' | 'winnerImageFile';
+    'winnerGraphicType' | 'winnerImageMode' | 'winnerImageUrl' | 'winnerImageFile' |
+    'visibilityMode';
     value: string;
 }
 
