@@ -1298,24 +1298,23 @@ export function tournamentSystemUpdateEffectType() {
                             payloadConfig.tournamentData.settings.showStandings = showStandings;
                         }
 
+                        const baseVisibilityConfig = {
+                            ...payloadConfig,
+                            tournamentTitle: tournamentId.replace("tournament_", ""),
+                            visibilityMode: visibilityModeConfig
+                        };
+
                         const visibilityPayload =
                             visibilityModeConfig === "hideAll"
                                 ? {
                                       type: "hide",
                                       overlayInstance: visibilityOverlayInstance,
-                                      config: {
-                                          tournamentTitle: tournamentId.replace("tournament_", ""),
-                                          visibilityMode: visibilityModeConfig
-                                      }
+                                      config: baseVisibilityConfig
                                   }
                                 : {
                                       type: "show",
                                       overlayInstance: visibilityOverlayInstance,
-                                      config: {
-                                          ...payloadConfig,
-                                          tournamentTitle: tournamentId.replace("tournament_", ""),
-                                          visibilityMode: visibilityModeConfig
-                                      }
+                                      config: baseVisibilityConfig
                                   };
 
                         await webServer.sendToOverlay("tournament-updater", visibilityPayload);
